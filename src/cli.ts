@@ -10,25 +10,43 @@
  *   npx gif2video input.gif output.mp4
  */
 import { resolve } from 'node:path';
+import { stat } from 'node:fs/promises';
 import { convertFile } from './index.js';
+import { printCompatInfo } from './ffmpeg.js';
 
 const args = process.argv.slice(2);
 
+// Handle --compat flag
+if (args.includes('--compat')) {
+  await printCompatInfo();
+  process.exit(0);
+}
+
+// Handle --help flag
 if (args.length < 2 || args.includes('--help') || args.includes('-h')) {
   console.log('gif2video - Convert GIF animations to MP4 videos');
   console.log('');
   console.log('Usage:');
-  console.log('  gif2video <input.gif> <output>');
-  console.log('  npx gif2video <input.gif> <output>');
+  console.log('  gif2video <input.gif> <output> [options]');
+  console.log('  npx gif2video <input.gif> <output> [options]');
   console.log('');
   console.log('Examples:');
   console.log('  gif2video input.gif output.mp4');
   console.log('  gif2video input.gif ./output-folder/');
   console.log('  gif2video input.gif output  # Creates output.mp4');
+  console.log('  gif2video input.gif output.mp4 --fps 30  # Custom FPS');
   console.log('');
   console.log('Options:');
   console.log('  --fps <number>     Frames per second (default: 10)');
+  console.log('  --compat           Check compatibility and available features');
   console.log('  --help, -h         Show this help message');
+  console.log('');
+  console.log('Note:');
+  console.log('  Output is automatically optimized with the best available method:');
+  console.log('  - Node.js: Uses ffmpeg (if installed)');
+  console.log('  - Browser: Uses WebCodecs API (if supported)');
+  console.log('  - Fallback: WASM-based encoding (always works)');
+  console.log('  Use --compat to check which optimization methods are available.');
   process.exit(args.includes('--help') || args.includes('-h') ? 0 : 1);
 }
 
@@ -51,9 +69,18 @@ if (options.fps) {
 console.log('');
 
 try {
+  const startTime = Date.now();
   const outputFile = await convertFile(inputPath, outputPath, options);
+  const duration = Date.now() - startTime;
+
+  // Get file size
+  const stats = await stat(outputFile);
+  const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
+
   console.log('✓ Conversion successful!');
   console.log(`  Output file: ${outputFile}`);
+  console.log(`  File size: ${sizeMB} MB`);
+  console.log(`  Duration: ${(duration / 1000).toFixed(2)}s`);
 } catch (error) {
   console.error('✗ Conversion failed:');
   console.error((error as Error).message);

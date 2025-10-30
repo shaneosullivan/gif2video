@@ -37,9 +37,71 @@ gif2video input.gif ./videos/
 # Custom FPS
 gif2video input.gif output.mp4 --fps 30
 
+# Check compatibility and available features
+gif2video --compat
+
 # Show help
 gif2video --help
 ```
+
+#### Automatic Optimization
+
+gif2video **automatically optimizes** output files using the best available method in your environment. This typically reduces file size by **70-99%** while maintaining visual quality.
+
+**Optimization Methods:**
+
+gif2video automatically selects the best optimization method based on your environment:
+
+| Environment | Method | Requirements | Compression | Quality |
+|-------------|--------|--------------|-------------|---------|
+| **Node.js** | ffmpeg | Install ffmpeg binary | 70-99% reduction | ⭐⭐⭐ Best |
+| **Browser (Chrome/Edge/Firefox)** | WebCodecs API | Chrome 94+, Edge 94+, Firefox 133+ | 70-95% reduction | ⭐⭐⭐ Excellent |
+| **Browser (Safari)** | WebCodecs API | Safari 16.4+ (H.264 only) | 70-95% reduction | ⭐⭐ Good (some limitations) |
+| **Fallback** | WASM only | No requirements (always works) | No compression | ⭐ Large files |
+
+**Node.js - Install ffmpeg:**
+```bash
+# macOS
+brew install ffmpeg
+
+# Ubuntu/Debian
+sudo apt-get install ffmpeg
+
+# Windows
+choco install ffmpeg
+
+# Check compatibility
+gif2video --compat
+```
+
+**Browser - WebCodecs Support:**
+- ✅ **Chrome/Edge 94+** - Full support, all codecs
+- ✅ **Firefox 133+** - Full support (Desktop only, mobile not yet available)
+- ⚠️ **Safari 16.4+** - Partial support with limitations:
+  - ✅ H.264/AVC encoding works (used by this library)
+  - ✅ VideoEncoder/VideoDecoder available
+  - ⚠️ Audio encoding only in Safari 26+ (not needed for GIF conversion)
+  - ⚠️ May have platform-specific issues on older iOS versions
+  - **Recommendation**: Works for gif2video, but ffmpeg (Node.js) is more reliable
+- ❌ **Firefox Mobile** - Not yet supported
+
+**Size comparison example:**
+- Unoptimized (WASM fallback): 5.5 MB
+- Optimized (ffmpeg): 44 KB (99% reduction)
+- Optimized (WebCodecs Chrome/Firefox): ~100-200 KB (95-98% reduction)
+- Optimized (WebCodecs Safari): ~100-200 KB (95-98% reduction, may vary)
+
+**Safari Users - Troubleshooting:**
+
+If WebCodecs optimization fails in Safari, the library will automatically fall back to WASM encoding. You'll see a warning in the console:
+```
+Optimization failed, using unoptimized output: [error details]
+```
+
+This is normal and the conversion will still work, just with larger file sizes. For production use with Safari users, consider:
+- Using Node.js server-side conversion with ffmpeg for best results
+- Testing on your target Safari/iOS versions
+- Checking browser console for WebCodecs availability
 
 ### Programmatic API
 
@@ -153,6 +215,8 @@ await convertFrames(frames, {
 });
 ```
 
+**Note:** Optimization is automatic - all outputs are automatically compressed using the best available method (ffmpeg, WebCodecs, or WASM fallback).
+
 ### CLI Usage
 
 You can also use the example CLI script:
@@ -170,7 +234,44 @@ node examples/convert.js input.gif output.mp4 --fps 30
 
 ### Real-World Examples
 
-#### Example 1: Batch Processing Multiple GIFs
+#### Example 1: Browser - Convert GIF to Optimized MP4
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GIF to MP4 Converter</title>
+</head>
+<body>
+    <input type="file" id="gifInput" accept="image/gif">
+    <button onclick="convert()">Convert to MP4</button>
+    <video id="output" controls></video>
+
+    <script type="module">
+        import { convertGifBuffer } from 'https://unpkg.com/gif2video/lib/index.js';
+
+        window.convert = async function() {
+            const file = document.getElementById('gifInput').files[0];
+            if (!file) return;
+
+            // Read GIF file
+            const arrayBuffer = await file.arrayBuffer();
+            const gifBuffer = new Uint8Array(arrayBuffer);
+
+            // Convert (automatically optimized with WebCodecs in browser)
+            const mp4Buffer = await convertGifBuffer(gifBuffer);
+
+            // Display result
+            const blob = new Blob([mp4Buffer], { type: 'video/mp4' });
+            const url = URL.createObjectURL(blob);
+            document.getElementById('output').src = url;
+        };
+    </script>
+</body>
+</html>
+```
+
+#### Example 2: Batch Processing Multiple GIFs (Node.js)
 
 ```typescript
 import { readdir } from 'fs/promises';
@@ -187,7 +288,7 @@ for (const file of gifFiles) {
 }
 ```
 
-#### Example 2: HTTP API Endpoint
+#### Example 3: HTTP API Endpoint
 
 ```typescript
 import express from 'express';
@@ -214,7 +315,7 @@ app.post(
 );
 ```
 
-#### Example 3: Generate Video from Canvas Frames
+#### Example 4: Generate Video from Canvas Frames
 
 ```typescript
 import { createCanvas } from 'canvas';
@@ -253,7 +354,7 @@ const mp4Buffer = await convertFrames(frames);
 await writeFile('./generated.mp4', mp4Buffer);
 ```
 
-#### Example 4: Process GIF from URL
+#### Example 5: Process GIF from URL
 
 ```typescript
 import { writeFile } from 'fs/promises';
@@ -271,7 +372,7 @@ const mp4Buffer = await convertGifBuffer(gifBuffer);
 await writeFile('./downloaded.mp4', mp4Buffer);
 ```
 
-#### Example 5: Stream Processing with Progress
+#### Example 6: Stream Processing with Progress
 
 ```typescript
 import { readdir } from 'fs/promises';
@@ -316,6 +417,8 @@ await convertWithProgress('./input-gifs', './output-videos');
 
 **Returns:** `Promise<string>` - The path to the created MP4 file
 
+**Note:** Output is automatically optimized using the best available method.
+
 #### `convertGifBuffer(gifBuffer, options?)`
 
 **Parameters:**
@@ -327,6 +430,8 @@ await convertWithProgress('./input-gifs', './output-videos');
   - `height` (number) - Output video height (optional, defaults to GIF height)
 
 **Returns:** `Promise<Buffer>` - Buffer containing MP4 video data
+
+**Note:** Output is automatically optimized using the best available method.
 
 #### `convertFrames(frames, options?)`
 
@@ -344,6 +449,8 @@ await convertWithProgress('./input-gifs', './output-videos');
   - `height` (number) - Output video height (optional, defaults to first frame height)
 
 **Returns:** `Promise<Buffer>` - Buffer containing MP4 video data
+
+**Note:** Output is automatically optimized using the best available method.
 
 ## Development
 

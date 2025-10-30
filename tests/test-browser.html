@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>gif2video Browser Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        #output {
+            margin-top: 20px;
+            white-space: pre-wrap;
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        video {
+            max-width: 100%;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>gif2video Browser Test</h1>
+
+    <div class="status info">
+        <strong>WebCodecs Support:</strong> <span id="webcodecs-status">Checking...</span>
+    </div>
+
+    <div>
+        <h2>Test Conversion:</h2>
+        <button onclick="testConversion()">Convert Test Frames</button>
+        <p><em>Note: Automatically uses WebCodecs optimization if available, falls back to WASM.</em></p>
+    </div>
+
+    <div id="output"></div>
+    <div id="video-container"></div>
+
+    <script type="module">
+        // Check WebCodecs support
+        const webCodecsSupported = typeof VideoEncoder !== 'undefined' && typeof VideoDecoder !== 'undefined';
+        document.getElementById('webcodecs-status').textContent = webCodecsSupported
+            ? '✓ Available'
+            : '✗ Not Available (requires Chrome 94+, Edge 94+, or Firefox 133+)';
+        document.getElementById('webcodecs-status').parentElement.className =
+            webCodecsSupported ? 'status success' : 'status error';
+
+        // Import gif2video module
+        import { convertFrames } from '../lib/index.js';
+
+        function log(message, type = 'info') {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            output.textContent += `[${timestamp}] ${message}\n`;
+        }
+
+        async function createTestFrames() {
+            // Create simple test frames (red, green, blue squares)
+            const width = 200;
+            const height = 200;
+            const frames = [];
+
+            const colors = [
+                [255, 0, 0, 255],    // Red
+                [0, 255, 0, 255],    // Green
+                [0, 0, 255, 255],    // Blue
+            ];
+
+            for (const color of colors) {
+                const data = new Uint8Array(width * height * 4);
+                for (let i = 0; i < width * height; i++) {
+                    data[i * 4 + 0] = color[0];
+                    data[i * 4 + 1] = color[1];
+                    data[i * 4 + 2] = color[2];
+                    data[i * 4 + 3] = color[3];
+                }
+
+                frames.push({
+                    data: {
+                        data,
+                        width,
+                        height,
+                    },
+                    delayMs: 1000, // 1 second per frame
+                });
+            }
+
+            return frames;
+        }
+
+        window.testConversion = async function() {
+            const method = webCodecsSupported ? 'WebCodecs (optimized)' : 'WASM (fallback)';
+            log(`Starting conversion using ${method}...`);
+
+            try {
+                const frames = await createTestFrames();
+                const startTime = Date.now();
+
+                // Automatically uses best available method
+                const mp4Buffer = await convertFrames(frames);
+
+                const duration = Date.now() - startTime;
+                const sizeMB = (mp4Buffer.length / (1024 * 1024)).toFixed(2);
+                const sizeKB = (mp4Buffer.length / 1024).toFixed(2);
+
+                log(`✓ Success!`, 'success');
+                log(`  Method: ${method}`);
+                log(`  Size: ${sizeMB} MB (${sizeKB} KB)`);
+                log(`  Duration: ${duration}ms`);
+
+                // Display video
+                displayVideo(mp4Buffer);
+            } catch (error) {
+                log(`✗ Error: ${error.message}`, 'error');
+                console.error(error);
+            }
+        };
+
+        function displayVideo(buffer) {
+            const blob = new Blob([buffer], { type: 'video/mp4' });
+            const url = URL.createObjectURL(blob);
+
+            const container = document.getElementById('video-container');
+            container.innerHTML = `
+                <h3>Generated Video:</h3>
+                <video controls autoplay loop>
+                    <source src="${url}" type="video/mp4">
+                    Your browser doesn't support video playback.
+                </video>
+            `;
+        }
+    </script>
+</body>
+</html>

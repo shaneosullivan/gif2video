@@ -21,7 +21,7 @@ interface WasmModule {
   HEAPU8: Uint8Array;
 }
 
-interface ConversionOptions {
+export interface ConversionOptions {
   fps?: number;
   height?: number;
   width?: number;
@@ -77,6 +77,44 @@ async function resolveOutputPath(
   }
 
   return outputPath;
+}
+
+/**
+ * Optimize MP4 buffer - uses ffmpeg in Node.js or WebCodecs in browser
+ */
+async function optimizeMP4Buffer(
+  mp4Buffer: Buffer | Uint8Array,
+  frames?: Array<{ data: Uint8Array; delay: number; height: number; width: number }>,
+): Promise<Buffer | Uint8Array> {
+  const inBrowser = typeof window !== 'undefined';
+
+  if (inBrowser) {
+    // Use WebCodecs in browser
+    const { checkWebCodecs, encodeFramesWithWebCodecs } = await import('./webcodecs.js');
+    const webCodecsInfo = checkWebCodecs();
+
+    if (!webCodecsInfo.available) {
+      throw new Error(
+        'Optimization is not available in this browser. ' +
+          'WebCodecs API requires Chrome 94+, Edge 94+, or Firefox 133+. ' +
+          'Alternatively, use Node.js with ffmpeg for optimization.',
+      );
+    }
+
+    if (!frames || frames.length === 0) {
+      throw new Error(
+        'Browser optimization requires raw frames. ' +
+          'This is an internal error - please report this issue.',
+      );
+    }
+
+    // Encode frames with WebCodecs
+    return encodeFramesWithWebCodecs(frames);
+  } else {
+    // Use ffmpeg in Node.js
+    const { optimizeMP4 } = await import('./ffmpeg.js');
+    return optimizeMP4(mp4Buffer instanceof Uint8Array ? Buffer.from(mp4Buffer) : mp4Buffer);
+  }
 }
 
 /**
@@ -217,7 +255,18 @@ export async function convertFrames(
     width: frame.data.width,
   }));
 
-  return encodeFramesToMp4(internalFrames, width, height, fps);
+  let mp4Buffer = await encodeFramesToMp4(internalFrames, width, height, fps);
+
+  // Always optimize with best available method
+  try {
+    const optimized = await optimizeMP4Buffer(mp4Buffer, internalFrames);
+    mp4Buffer = optimized instanceof Buffer ? optimized : Buffer.from(optimized);
+  } catch (error) {
+    // If optimization fails, continue with unoptimized buffer
+    console.warn('Optimization failed, using unoptimized output:', (error as Error).message);
+  }
+
+  return mp4Buffer;
 }
 
 /**
@@ -240,7 +289,18 @@ export async function convertGifBuffer(
     width: frame.image.bitmap.width,
   }));
 
-  return encodeFramesToMp4(internalFrames, width, height, fps);
+  let mp4Buffer = await encodeFramesToMp4(internalFrames, width, height, fps);
+
+  // Always optimize with best available method
+  try {
+    const optimized = await optimizeMP4Buffer(mp4Buffer, internalFrames);
+    mp4Buffer = optimized instanceof Buffer ? optimized : Buffer.from(optimized);
+  } catch (error) {
+    // If optimization fails, continue with unoptimized buffer
+    console.warn('Optimization failed, using unoptimized output:', (error as Error).message);
+  }
+
+  return mp4Buffer;
 }
 
 /**
