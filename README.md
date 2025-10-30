@@ -11,7 +11,37 @@ The supported output formats are:
 npm install gif2video
 ```
 
+Or use directly with npx (no installation required):
+
+```bash
+npx gif2video input.gif output.mp4
+```
+
 ## Usage
+
+### Command Line Interface
+
+You can use gif2video directly from the command line:
+
+```bash
+# Using npx (no installation required)
+npx gif2video input.gif output.mp4
+
+# Or install globally
+npm install -g gif2video
+gif2video input.gif output.mp4
+
+# Convert to directory (auto-generates filename)
+gif2video input.gif ./videos/
+
+# Custom FPS
+gif2video input.gif output.mp4 --fps 30
+
+# Show help
+gif2video --help
+```
+
+### Programmatic API
 
 The library exports three functions for different use cases:
 

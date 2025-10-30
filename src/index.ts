@@ -63,6 +63,10 @@ async function resolveOutputPath(
       const inputBasename = basename(inputPath, extname(inputPath));
       return join(outputPath, `${inputBasename}.mp4`);
     }
+    // If it's an existing file, check if it needs .mp4 extension
+    if (!extname(outputPath)) {
+      return `${outputPath}.mp4`;
+    }
   } catch {
     // Path doesn't exist or is not accessible - treat as file path
   }

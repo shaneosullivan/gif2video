@@ -15,11 +15,15 @@
   "type": "module",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
+  "bin": {
+    "gif2video": "./lib/cli.js"
+  },
   "files": [
-    "lib"
+    "lib",
+    "converter/wasm"
   ],
   "scripts": {
-    "build": "tsdown -d lib --target=node24",
+    "build": "tsdown src/index.ts src/cli.ts -d lib --target=node24",
     "format": "prettier --experimental-cli --write .",
     "format:wasm": "prettier --experimental-cli --write 'converter/wasm/**/*.js'",
     "lint": "eslint --cache .",
