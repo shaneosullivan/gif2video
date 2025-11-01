@@ -52,14 +52,15 @@ gif2video **automatically optimizes** output files using the best available meth
 
 gif2video automatically selects the best optimization method based on your environment:
 
-| Environment | Method | Requirements | Compression | Quality |
-|-------------|--------|--------------|-------------|---------|
-| **Node.js** | ffmpeg | Install ffmpeg binary | 70-99% reduction | ⭐⭐⭐ Best |
-| **Browser (Chrome/Edge/Firefox)** | WebCodecs API | Chrome 94+, Edge 94+, Firefox 133+ | 70-95% reduction | ⭐⭐⭐ Excellent |
-| **Browser (Safari)** | WebCodecs API | Safari 16.4+ (H.264 only) | 70-95% reduction | ⭐⭐ Good (some limitations) |
-| **Fallback** | WASM only | No requirements (always works) | No compression | ⭐ Large files |
+| Environment                       | Method        | Requirements                       | Compression      | Quality                      |
+| --------------------------------- | ------------- | ---------------------------------- | ---------------- | ---------------------------- |
+| **Node.js**                       | ffmpeg        | Install ffmpeg binary              | 70-99% reduction | ⭐⭐⭐ Best                  |
+| **Browser (Chrome/Edge/Firefox)** | WebCodecs API | Chrome 94+, Edge 94+, Firefox 133+ | 70-95% reduction | ⭐⭐⭐ Excellent             |
+| **Browser (Safari)**              | WebCodecs API | Safari 16.4+ (H.264 only)          | 70-95% reduction | ⭐⭐ Good (some limitations) |
+| **Fallback**                      | WASM only     | No requirements (always works)     | No compression   | ⭐ Large files               |
 
 **Node.js - Install ffmpeg:**
+
 ```bash
 # macOS
 brew install ffmpeg
@@ -75,6 +76,7 @@ gif2video --compat
 ```
 
 **Browser - WebCodecs Support:**
+
 - ✅ **Chrome/Edge 94+** - Full support, all codecs
 - ✅ **Firefox 133+** - Full support (Desktop only, mobile not yet available)
 - ⚠️ **Safari 16.4+** - Partial support with limitations:
@@ -86,6 +88,7 @@ gif2video --compat
 - ❌ **Firefox Mobile** - Not yet supported
 
 **Size comparison example:**
+
 - Unoptimized (WASM fallback): 5.5 MB
 - Optimized (ffmpeg): 44 KB (99% reduction)
 - Optimized (WebCodecs Chrome/Firefox): ~100-200 KB (95-98% reduction)
@@ -94,11 +97,13 @@ gif2video --compat
 **Safari Users - Troubleshooting:**
 
 If WebCodecs optimization fails in Safari, the library will automatically fall back to WASM encoding. You'll see a warning in the console:
+
 ```
 Optimization failed, using unoptimized output: [error details]
 ```
 
 This is normal and the conversion will still work, just with larger file sizes. For production use with Safari users, consider:
+
 - Using Node.js server-side conversion with ffmpeg for best results
 - Testing on your target Safari/iOS versions
 - Checking browser console for WebCodecs availability
@@ -234,44 +239,134 @@ node examples/convert.js input.gif output.mp4 --fps 30
 
 ### Real-World Examples
 
-#### Example 1: Browser - Convert GIF to Optimized MP4
+#### Example 1: Browser - Simple HTML Page (No Build Step)
+
+The easiest way to use gif2video in a browser is with the standalone script - just one `<script>` tag, no build tools required:
 
 ```html
 <!DOCTYPE html>
 <html>
-<head>
+  <head>
     <title>GIF to MP4 Converter</title>
-</head>
-<body>
-    <input type="file" id="gifInput" accept="image/gif">
+  </head>
+  <body>
+    <h1>GIF to MP4 Converter</h1>
+    <input type="file" id="gifInput" accept="image/gif" />
     <button onclick="convert()">Convert to MP4</button>
-    <video id="output" controls></video>
+    <video
+      id="output"
+      controls
+      style="max-width: 100%; margin-top: 20px;"
+    ></video>
+    <div id="status"></div>
 
-    <script type="module">
-        import { convertGifBuffer } from 'https://unpkg.com/gif2video/lib/index.js';
+    <!-- Load the standalone bundle - includes everything you need! -->
+    <script src="https://unpkg.com/gif2video/lib/browser/gif2video.standalone.js"></script>
 
-        window.convert = async function() {
-            const file = document.getElementById('gifInput').files[0];
-            if (!file) return;
+    <script>
+      // Access gif2video from the global window object
+      const { convertGifBuffer } = window.gif2video;
 
-            // Read GIF file
-            const arrayBuffer = await file.arrayBuffer();
-            const gifBuffer = new Uint8Array(arrayBuffer);
+      async function convert() {
+        const file = document.getElementById('gifInput').files[0];
+        if (!file) {
+          alert('Please select a GIF file');
+          return;
+        }
 
-            // Convert (automatically optimized with WebCodecs in browser)
-            const mp4Buffer = await convertGifBuffer(gifBuffer);
+        const status = document.getElementById('status');
+        status.textContent = 'Converting...';
 
-            // Display result
-            const blob = new Blob([mp4Buffer], { type: 'video/mp4' });
-            const url = URL.createObjectURL(blob);
-            document.getElementById('output').src = url;
-        };
+        try {
+          // Read GIF file
+          const arrayBuffer = await file.arrayBuffer();
+          const gifBuffer = new Uint8Array(arrayBuffer);
+
+          // Convert to MP4 (automatically optimized with WebCodecs in supported browsers)
+          const mp4Buffer = await convertGifBuffer(gifBuffer);
+
+          // Display result
+          const blob = new Blob([mp4Buffer], { type: 'video/mp4' });
+          const url = URL.createObjectURL(blob);
+
+          // Show the converted video in the <video> tag
+          document.getElementById('output').src = url;
+
+          const sizeMB = (mp4Buffer.length / (1024 * 1024)).toFixed(2);
+          status.textContent = `✓ Conversion complete! Output size: ${sizeMB} MB`;
+        } catch (error) {
+          status.textContent = `✗ Error: ${error.message}`;
+          console.error(error);
+        }
+      }
     </script>
-</body>
+  </body>
 </html>
 ```
 
-#### Example 2: Batch Processing Multiple GIFs (Node.js)
+**Features:**
+
+- ✅ **Zero dependencies** - Single file includes everything (h264-mp4-encoder, WASM, etc.)
+- ✅ **No build step** - Works directly in any browser
+- ✅ **Automatic optimization** - Uses WebCodecs API when available
+- ✅ **Simple API** - Just `window.gif2video.convertGifBuffer()`
+
+#### Example 2: Browser - Using ES Modules (With Build Tools)
+
+If you're using a modern build tool (webpack, vite, rollup, etc.), you can import the ES module version:
+
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>GIF to MP4 Converter</title>
+  </head>
+  <body>
+    <input type="file" id="gifInput" accept="image/gif" />
+    <button onclick="convert()">Convert to MP4</button>
+    <video id="output" controls></video>
+
+    <!-- Load h264-mp4-encoder separately (required for ES module build) -->
+    <script src="https://unpkg.com/h264-mp4-encoder@1.0.12/embuild/dist/h264-mp4-encoder.web.js"></script>
+
+    <script type="module">
+      // Import from the ES module build
+      import { convertGifBuffer } from 'https://unpkg.com/gif2video/lib/browser/index.js';
+
+      window.convert = async function () {
+        const file = document.getElementById('gifInput').files[0];
+        if (!file) return;
+
+        // Read GIF file
+        const arrayBuffer = await file.arrayBuffer();
+        const gifBuffer = new Uint8Array(arrayBuffer);
+
+        // Convert (automatically optimized with WebCodecs in browser)
+        const mp4Buffer = await convertGifBuffer(gifBuffer);
+
+        // Display result
+        const blob = new Blob([mp4Buffer], { type: 'video/mp4' });
+        const url = URL.createObjectURL(blob);
+        document.getElementById('output').src = url;
+      };
+    </script>
+  </body>
+</html>
+```
+
+**When to use ES modules:**
+
+- You're already using a build tool for your project
+- You want tree-shaking for smaller bundle sizes
+- You prefer standard import/export syntax
+
+**When to use the standalone script:**
+
+- Simple HTML pages without a build step
+- Prototyping and demos
+- You want the easiest possible setup
+
+#### Example 3: Batch Processing Multiple GIFs (Node.js)
 
 ```typescript
 import { readdir } from 'fs/promises';
@@ -401,6 +496,65 @@ async function convertWithProgress(inputDir: string, outputDir: string) {
 
 await convertWithProgress('./input-gifs', './output-videos');
 ```
+
+### Browser Builds
+
+gif2video provides two browser builds to suit different use cases:
+
+#### Standalone Build (Recommended for Simple HTML Pages)
+
+**File:** `lib/browser/gif2video.standalone.js`
+
+**Usage:**
+
+```html
+<script src="https://unpkg.com/gif2video/lib/browser/gif2video.standalone.js"></script>
+<script>
+  const { convertGifBuffer } = window.gif2video;
+  // Use convertGifBuffer, convertFile, or convertFrames
+</script>
+```
+
+**Features:**
+
+- ✅ Self-contained: No external dependencies
+- ✅ Includes h264-mp4-encoder for optimization
+- ✅ Works without a build step
+- ✅ Automatic WebCodecs optimization
+- ✅ WASM fallback for older browsers
+
+**Build command:** `npm run build:browser:standalone`
+
+#### ES Module Build (For Build Tools)
+
+**File:** `lib/browser/index.js`
+
+**Usage:**
+
+```javascript
+import { convertGifBuffer } from 'gif2video';
+```
+
+**Features:**
+
+- ✅ Smaller file size
+- ✅ Tree-shaking support
+- ✅ Standard import/export syntax
+- ⚠️ Requires h264-mp4-encoder to be loaded separately
+- ⚠️ Best with a build tool (webpack, vite, etc.)
+
+**Build command:** `npm run build:browser`
+
+**Comparison:**
+
+| Feature             | Standalone               | ES Module                            |
+| ------------------- | ------------------------ | ------------------------------------ |
+| Setup complexity    | Very easy                | Moderate                             |
+| Dependencies        | None (all bundled)       | Requires h264-mp4-encoder separately |
+| File size           | ~1-2 MB                  | ~500 KB + h264-mp4-encoder           |
+| Build step required | No                       | Recommended                          |
+| Tree-shaking        | No                       | Yes                                  |
+| Use case            | Simple HTML pages, demos | Production apps with build tools     |
 
 ### API Reference
 
