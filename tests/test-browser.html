@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>gif2video Browser Test</title>
-    <!-- Load h264-mp4-encoder for optimization -->
-    <script src="../node_modules/h264-mp4-encoder/embuild/dist/h264-mp4-encoder.web.js"></script>
+    <!-- Load the standalone bundle that includes h264-mp4-encoder and gif2video -->
+    <script src="../lib/browser/gif2video.standalone.js"></script>
     <style>
       * {
         box-sizing: border-box;
@@ -303,7 +303,7 @@
               <strong>Select a GIF file:</strong>
             </label>
             <input type="file" id="gif-input" accept="image/gif" />
-            <p><em>Converts GIF to MP4 using gif2video + h264-mp4-encoder</em></p>
+            <p><em>Converts GIF to MP4 using bundled gif2video library</em></p>
             <span
               id="processing-indicator"
               class="processing"
@@ -328,9 +328,9 @@
       </div>
     </div>
 
-    <script type="module">
-      // Import gif2video module - single bundled file with all dependencies!
-      import { convertGifBuffer } from '../lib/browser/index.js';
+    <script>
+      // Use the global gif2video object from the standalone bundle
+      const { convertGifBuffer } = window.gif2video;
 
       // Check WebCodecs support
       const webCodecsSupported =

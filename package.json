@@ -24,9 +24,10 @@
     "converter/wasm"
   ],
   "scripts": {
-    "build": "npm run build:wasm && tsdown src/index.ts src/cli.ts -d lib --target=node24 && npm run build:browser",
+    "build": "npm run build:wasm && tsdown src/index.ts src/cli.ts -d lib --target=node24 && npm run build:browser && npm run build:browser:standalone",
     "build:node": "tsdown src/index.ts src/cli.ts -d lib --target=node24",
     "build:browser": "node esbuild.browser.mjs && tsc src/index.ts --declaration --emitDeclarationOnly --outDir lib/browser --module esnext --moduleResolution bundler",
+    "build:browser:standalone": "node esbuild.browser.standalone.mjs",
     "build:wasm": "./scripts/buildConverter.sh",
     "format": "prettier --experimental-cli --write .",
     "format:wasm": "prettier --experimental-cli --write 'converter/wasm/**/*.js'",
