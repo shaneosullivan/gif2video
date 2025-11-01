@@ -306,7 +306,8 @@ The easiest way to use gif2video in a browser is with the standalone script - ju
 
 **Features:**
 
-- ✅ **Zero dependencies** - Single file includes everything (h264-mp4-encoder, WASM, etc.)
+- ✅ **Single file deployment** - Just `gif2video.standalone.js` (~1.7 MB with embedded WASM)
+- ✅ **Zero dependencies** - Includes everything (h264-mp4-encoder, WASM binary, etc.)
 - ✅ **No build step** - Works directly in any browser
 - ✅ **Automatic optimization** - Uses WebCodecs API when available
 - ✅ **Simple API** - Just `window.gif2video.convertGifBuffer()`
@@ -383,7 +384,7 @@ for (const file of gifFiles) {
 }
 ```
 
-#### Example 3: HTTP API Endpoint
+#### Example 4: HTTP API Endpoint
 
 ```typescript
 import express from 'express';
@@ -410,7 +411,7 @@ app.post(
 );
 ```
 
-#### Example 4: Generate Video from Canvas Frames
+#### Example 5: Generate Video from Canvas Frames
 
 ```typescript
 import { createCanvas } from 'canvas';
@@ -449,7 +450,7 @@ const mp4Buffer = await convertFrames(frames);
 await writeFile('./generated.mp4', mp4Buffer);
 ```
 
-#### Example 5: Process GIF from URL
+#### Example 6: Process GIF from URL
 
 ```typescript
 import { writeFile } from 'fs/promises';
@@ -467,7 +468,7 @@ const mp4Buffer = await convertGifBuffer(gifBuffer);
 await writeFile('./downloaded.mp4', mp4Buffer);
 ```
 
-#### Example 6: Stream Processing with Progress
+#### Example 7: Stream Processing with Progress
 
 ```typescript
 import { readdir } from 'fs/promises';
@@ -524,6 +525,22 @@ gif2video provides two browser builds to suit different use cases:
 - ✅ WASM fallback for older browsers
 
 **Build command:** `npm run build:browser:standalone`
+
+**Deployment:**
+
+The standalone bundle is a **single file** (~1.7 MB) with the WASM binary embedded as base64. Just copy `gif2video.standalone.js` to your server - no other files needed!
+
+```
+your-website/
+└── js/
+    └── gif2video.standalone.js  ← Single file - that's it!
+```
+
+**Why single file?**
+- **Zero configuration** - Just drop it in and it works
+- **No CORS issues** - No external file loading
+- **Reliable** - Can't have missing WASM files
+- **Simple deployment** - Copy one file to CDN/server
 
 #### ES Module Build (For Build Tools)
 
