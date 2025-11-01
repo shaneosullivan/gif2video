@@ -1,152 +1,557 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>gif2video Browser Test</title>
+    <!-- Load h264-mp4-encoder for optimization -->
+    <script src="../node_modules/h264-mp4-encoder/embuild/dist/h264-mp4-encoder.web.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 50px auto;
-            padding: 20px;
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          'Helvetica Neue', Arial, sans-serif;
+        background: #f5f5f5;
+        min-height: 100vh;
+        padding: 40px 20px;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+
+      header {
+        background: #2c3e50;
+        color: white;
+        padding: 40px;
+        text-align: center;
+        border-bottom: 3px solid #3498db;
+      }
+
+      h1 {
+        font-size: 2.5em;
+        font-weight: 700;
+        margin-bottom: 10px;
+      }
+
+      .subtitle {
+        font-size: 1.1em;
+        opacity: 0.9;
+      }
+
+      .content {
+        padding: 40px;
+      }
+
+      .status {
+        padding: 15px 20px;
+        margin-bottom: 30px;
+        border-radius: 10px;
+        font-size: 1.05em;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .status::before {
+        content: '';
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      .success {
+        background: #d4edda;
+        color: #155724;
+        border-left: 4px solid #28a745;
+      }
+      .success::before {
+        background: #28a745;
+      }
+
+      .error {
+        background: #f8d7da;
+        color: #721c24;
+        border-left: 4px solid #dc3545;
+      }
+      .error::before {
+        background: #dc3545;
+      }
+
+      .info {
+        background: #d1ecf1;
+        color: #0c5460;
+        border-left: 4px solid #17a2b8;
+      }
+      .info::before {
+        background: #17a2b8;
+      }
+
+      .section {
+        margin-bottom: 40px;
+      }
+
+      h2 {
+        color: #333;
+        font-size: 1.6em;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      h2::before {
+        content: '';
+        display: inline-block;
+        width: 4px;
+        height: 24px;
+        background: #3498db;
+        border-radius: 2px;
+      }
+
+      .file-input-container {
+        padding: 30px;
+        background: #fafafa;
+        border-radius: 8px;
+        border: 2px dashed #ccc;
+        text-align: center;
+        transition: all 0.3s ease;
+      }
+
+      .file-input-container:hover {
+        border-color: #3498db;
+        background: #fff;
+      }
+
+      input[type='file'] {
+        margin: 15px 0;
+        padding: 10px;
+        font-size: 1em;
+      }
+
+      button {
+        padding: 12px 30px;
+        font-size: 1.05em;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+        border-radius: 5px;
+        background: #3498db;
+        color: white;
+        transition: all 0.2s ease;
+      }
+
+      button:hover {
+        background: #2980b9;
+      }
+
+      button:active {
+        background: #2472a4;
+      }
+
+      #output {
+        margin-top: 20px;
+        white-space: pre-wrap;
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 10px;
+        font-family: 'Monaco', 'Courier New', monospace;
+        font-size: 0.9em;
+        line-height: 1.6;
+        border: 1px solid #e9ecef;
+        max-height: 300px;
+        overflow-y: auto;
+      }
+
+      .comparison-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        margin-top: 30px;
+      }
+
+      @media (max-width: 768px) {
+        .comparison-container {
+          grid-template-columns: 1fr;
         }
-        .status {
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 5px;
+      }
+
+      .media-box {
+        background: #fafafa;
+        border-radius: 8px;
+        padding: 20px;
+        border: 1px solid #e0e0e0;
+      }
+
+      .media-box h3 {
+        color: #495057;
+        font-size: 1.3em;
+        margin-bottom: 15px;
+        text-align: center;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #e9ecef;
+      }
+
+      .media-box img,
+      .media-box video {
+        width: 100%;
+        height: auto;
+        border-radius: 10px;
+        border: 2px solid #dee2e6;
+        background: white;
+        display: block;
+      }
+
+      .media-info {
+        margin-top: 15px;
+        padding: 15px;
+        background: white;
+        border-radius: 8px;
+        font-size: 0.9em;
+        color: #6c757d;
+      }
+
+      .media-info-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 5px 0;
+        border-bottom: 1px solid #f1f3f5;
+      }
+
+      .media-info-item:last-child {
+        border-bottom: none;
+      }
+
+      .media-info-label {
+        font-weight: 600;
+        color: #495057;
+      }
+
+      .download-link {
+        display: block;
+        margin-top: 15px;
+        padding: 12px 20px;
+        background: #27ae60;
+        color: white;
+        text-decoration: none;
+        border-radius: 5px;
+        text-align: center;
+        font-weight: 600;
+        transition: all 0.2s ease;
+      }
+
+      .download-link:hover {
+        background: #229954;
+      }
+
+      .processing {
+        display: inline-block;
+        margin-top: 15px;
+        color: #3498db;
+        font-weight: 600;
+        animation: pulse 1.5s ease-in-out infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
         }
-        .success { background: #d4edda; color: #155724; }
-        .error { background: #f8d7da; color: #721c24; }
-        .info { background: #d1ecf1; color: #0c5460; }
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-            margin: 5px;
+        50% {
+          opacity: 0.5;
         }
-        #output {
-            margin-top: 20px;
-            white-space: pre-wrap;
-            background: #f5f5f5;
-            padding: 15px;
-            border-radius: 5px;
-        }
-        video {
-            max-width: 100%;
-            margin-top: 20px;
-        }
+      }
+
+      .icon {
+        font-size: 1.2em;
+      }
     </style>
-</head>
-<body>
-    <h1>gif2video Browser Test</h1>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>🎬 gif2video</h1>
+        <p class="subtitle">
+          Convert GIF animations to optimized MP4 videos in your browser
+        </p>
+      </header>
 
-    <div class="status info">
-        <strong>WebCodecs Support:</strong> <span id="webcodecs-status">Checking...</span>
+      <div class="content">
+        <div class="status info">
+          <strong>WebCodecs Support:</strong>
+          <span id="webcodecs-status">Checking...</span>
+        </div>
+
+        <div class="section">
+          <h2>Convert Your GIF</h2>
+          <div class="file-input-container">
+            <div class="icon">📁</div>
+            <label for="gif-input">
+              <strong>Select a GIF file:</strong>
+            </label>
+            <input type="file" id="gif-input" accept="image/gif" />
+            <p><em>Converts GIF to MP4 using gif2video + h264-mp4-encoder</em></p>
+            <span
+              id="processing-indicator"
+              class="processing"
+              style="display: none"
+              >⏳ Processing...</span
+            >
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Quick Test</h2>
+          <button onclick="testExistingGif()">
+            🚀 Load & Convert test1.gif
+          </button>
+          <p style="margin-top: 10px; color: #6c757d">
+            <em>Test with the included sample GIF file</em>
+          </p>
+        </div>
+
+        <div id="output"></div>
+        <div id="comparison-container"></div>
+      </div>
     </div>
-
-    <div>
-        <h2>Test Conversion:</h2>
-        <button onclick="testConversion()">Convert Test Frames</button>
-        <p><em>Note: Automatically uses WebCodecs optimization if available, falls back to WASM.</em></p>
-    </div>
-
-    <div id="output"></div>
-    <div id="video-container"></div>
 
     <script type="module">
-        // Check WebCodecs support
-        const webCodecsSupported = typeof VideoEncoder !== 'undefined' && typeof VideoDecoder !== 'undefined';
-        document.getElementById('webcodecs-status').textContent = webCodecsSupported
-            ? '✓ Available'
-            : '✗ Not Available (requires Chrome 94+, Edge 94+, or Firefox 133+)';
-        document.getElementById('webcodecs-status').parentElement.className =
-            webCodecsSupported ? 'status success' : 'status error';
+      // Import gif2video module - single bundled file with all dependencies!
+      import { convertGifBuffer } from '../lib/browser/index.js';
 
-        // Import gif2video module
-        import { convertFrames } from '../lib/index.js';
+      // Check WebCodecs support
+      const webCodecsSupported =
+        typeof VideoEncoder !== 'undefined' &&
+        typeof VideoDecoder !== 'undefined';
+      document.getElementById('webcodecs-status').textContent =
+        webCodecsSupported
+          ? '✓ Available (will use for optimization)'
+          : '✗ Not Available (will use WASM only)';
+      document.getElementById('webcodecs-status').parentElement.className =
+        webCodecsSupported ? 'status success' : 'status info';
 
-        function log(message, type = 'info') {
-            const output = document.getElementById('output');
-            const timestamp = new Date().toLocaleTimeString();
-            output.textContent += `[${timestamp}] ${message}\n`;
-        }
+      function log(message, type = 'info') {
+        const output = document.getElementById('output');
+        const timestamp = new Date().toLocaleTimeString();
+        output.textContent += `[${timestamp}] ${message}\n`;
+      }
 
-        async function createTestFrames() {
-            // Create simple test frames (red, green, blue squares)
-            const width = 200;
-            const height = 200;
-            const frames = [];
+      function clearOutput() {
+        document.getElementById('output').textContent = '';
+      }
 
-            const colors = [
-                [255, 0, 0, 255],    // Red
-                [0, 255, 0, 255],    // Green
-                [0, 0, 255, 255],    // Blue
-            ];
+      // Handle GIF file input
+      document
+        .getElementById('gif-input')
+        .addEventListener('change', async (event) => {
+          const file = event.target.files[0];
+          if (!file) return;
 
-            for (const color of colors) {
-                const data = new Uint8Array(width * height * 4);
-                for (let i = 0; i < width * height; i++) {
-                    data[i * 4 + 0] = color[0];
-                    data[i * 4 + 1] = color[1];
-                    data[i * 4 + 2] = color[2];
-                    data[i * 4 + 3] = color[3];
-                }
+          clearOutput();
+          const method = webCodecsSupported
+            ? 'WebCodecs (optimized)'
+            : 'WASM (unoptimized)';
+          log(`Converting ${file.name} using ${method}...`);
 
-                frames.push({
-                    data: {
-                        data,
-                        width,
-                        height,
-                    },
-                    delayMs: 1000, // 1 second per frame
-                });
+          const processingIndicator = document.getElementById(
+            'processing-indicator',
+          );
+          processingIndicator.style.display = 'inline-block';
+
+          try {
+            const startTime = Date.now();
+
+            // Read the GIF file
+            const arrayBuffer = await file.arrayBuffer();
+            const gifBuffer = new Uint8Array(arrayBuffer);
+            const gifUrl = URL.createObjectURL(file);
+
+            // Convert to MP4 (automatically optimized if WebCodecs available)
+            const mp4Buffer = await convertGifBuffer(gifBuffer);
+
+            const duration = Date.now() - startTime;
+            const sizeMB = (mp4Buffer.length / (1024 * 1024)).toFixed(2);
+            const sizeKB = (mp4Buffer.length / 1024).toFixed(2);
+
+            log(`✓ Success!`);
+            log(`  Method: ${method}`);
+            log(`  Input: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
+            log(`  Output: ${sizeMB} MB (${sizeKB} KB)`);
+            log(`  Duration: ${(duration / 1000).toFixed(2)}s`);
+
+            const reduction =
+              ((file.size - mp4Buffer.length) / file.size) * 100;
+            if (reduction > 0) {
+              log(`  Size reduction: ${reduction.toFixed(1)}%`);
+            } else {
+              log(`  Note: MP4 is ${Math.abs(reduction).toFixed(1)}% larger`);
             }
 
-            return frames;
+            // Display comparison
+            displayComparison(gifUrl, gifBuffer, mp4Buffer, file.name);
+          } catch (error) {
+            log(`✗ Error: ${error.message}`);
+            console.error(error);
+          } finally {
+            processingIndicator.style.display = 'none';
+          }
+        });
+
+      window.testExistingGif = async function () {
+        clearOutput();
+        const method = webCodecsSupported
+          ? 'WebCodecs (optimized)'
+          : 'WASM (unoptimized)';
+        log(`Loading and converting test1.gif using ${method}...`);
+
+        try {
+          const startTime = Date.now();
+
+          // Fetch the test GIF file
+          const response = await fetch('images/test1.gif');
+          if (!response.ok) {
+            throw new Error(`Failed to load test1.gif: ${response.statusText}`);
+          }
+
+          const arrayBuffer = await response.arrayBuffer();
+          const gifBuffer = new Uint8Array(arrayBuffer);
+          const gifUrl = 'images/test1.gif';
+
+          log(
+            `Loaded ${(gifBuffer.length / 1024).toFixed(2)} KB, converting...`,
+          );
+
+          // Convert to MP4 (automatically optimized if WebCodecs available)
+          const mp4Buffer = await convertGifBuffer(gifBuffer);
+
+          const duration = Date.now() - startTime;
+          const sizeMB = (mp4Buffer.length / (1024 * 1024)).toFixed(2);
+          const sizeKB = (mp4Buffer.length / 1024).toFixed(2);
+
+          log(`✓ Success!`);
+          log(`  Method: ${method}`);
+          log(
+            `  Input: test1.gif (${(gifBuffer.length / 1024).toFixed(2)} KB)`,
+          );
+          log(`  Output: ${sizeMB} MB (${sizeKB} KB)`);
+          log(`  Duration: ${(duration / 1000).toFixed(2)}s`);
+
+          const reduction =
+            ((gifBuffer.length - mp4Buffer.length) / gifBuffer.length) * 100;
+          if (reduction > 0) {
+            log(`  Size reduction: ${reduction.toFixed(1)}%`);
+          } else {
+            log(`  Note: MP4 is ${Math.abs(reduction).toFixed(1)}% larger`);
+          }
+
+          // Display comparison
+          displayComparison(gifUrl, gifBuffer, mp4Buffer, 'test1.gif');
+        } catch (error) {
+          log(`✗ Error: ${error.message}`);
+          console.error(error);
         }
+      };
 
-        window.testConversion = async function() {
-            const method = webCodecsSupported ? 'WebCodecs (optimized)' : 'WASM (fallback)';
-            log(`Starting conversion using ${method}...`);
+      function displayComparison(
+        gifUrl,
+        gifBuffer,
+        mp4Buffer,
+        originalFilename,
+      ) {
+        const mp4Blob = new Blob([mp4Buffer], { type: 'video/mp4' });
+        const mp4Url = URL.createObjectURL(mp4Blob);
+        const outputFilename = originalFilename.replace(/\.(gif|GIF)$/, '.mp4');
 
-            try {
-                const frames = await createTestFrames();
-                const startTime = Date.now();
-
-                // Automatically uses best available method
-                const mp4Buffer = await convertFrames(frames);
-
-                const duration = Date.now() - startTime;
-                const sizeMB = (mp4Buffer.length / (1024 * 1024)).toFixed(2);
-                const sizeKB = (mp4Buffer.length / 1024).toFixed(2);
-
-                log(`✓ Success!`, 'success');
-                log(`  Method: ${method}`);
-                log(`  Size: ${sizeMB} MB (${sizeKB} KB)`);
-                log(`  Duration: ${duration}ms`);
-
-                // Display video
-                displayVideo(mp4Buffer);
-            } catch (error) {
-                log(`✗ Error: ${error.message}`, 'error');
-                console.error(error);
-            }
+        // Get GIF dimensions using Image
+        const img = new Image();
+        img.onload = function () {
+          updateMediaInfo('gif-dimensions', `${img.width} × ${img.height}px`);
         };
+        img.src = gifUrl;
 
-        function displayVideo(buffer) {
-            const blob = new Blob([buffer], { type: 'video/mp4' });
-            const url = URL.createObjectURL(blob);
+        const container = document.getElementById('comparison-container');
+        container.innerHTML = `
+                <div class="comparison-container">
+                    <div class="media-box">
+                        <h3>📥 Original GIF</h3>
+                        <img src="${gifUrl}" alt="Original GIF" id="gif-image">
+                        <div class="media-info">
+                            <div class="media-info-item">
+                                <span class="media-info-label">Format:</span>
+                                <span>GIF</span>
+                            </div>
+                            <div class="media-info-item">
+                                <span class="media-info-label">File Size:</span>
+                                <span>${(gifBuffer.length / 1024).toFixed(2)} KB</span>
+                            </div>
+                            <div class="media-info-item">
+                                <span class="media-info-label">Dimensions:</span>
+                                <span id="gif-dimensions">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
 
-            const container = document.getElementById('video-container');
-            container.innerHTML = `
-                <h3>Generated Video:</h3>
-                <video controls autoplay loop>
-                    <source src="${url}" type="video/mp4">
-                    Your browser doesn't support video playback.
-                </video>
+                    <div class="media-box">
+                        <h3>📤 Converted MP4</h3>
+                        <video controls autoplay loop id="mp4-video">
+                            <source src="${mp4Url}" type="video/mp4">
+                            Your browser doesn't support video playback.
+                        </video>
+                        <div class="media-info">
+                            <div class="media-info-item">
+                                <span class="media-info-label">Format:</span>
+                                <span>MP4 (H.264)</span>
+                            </div>
+                            <div class="media-info-item">
+                                <span class="media-info-label">File Size:</span>
+                                <span>${(mp4Buffer.length / 1024).toFixed(2)} KB</span>
+                            </div>
+                            <div class="media-info-item">
+                                <span class="media-info-label">Dimensions:</span>
+                                <span id="mp4-dimensions">Loading...</span>
+                            </div>
+                            <div class="media-info-item">
+                                <span class="media-info-label">Duration:</span>
+                                <span id="mp4-duration">Loading...</span>
+                            </div>
+                        </div>
+                        <a href="${mp4Url}" download="${outputFilename}" class="download-link">
+                            ⬇ Download ${outputFilename}
+                        </a>
+                    </div>
+                </div>
             `;
+
+        // Update video info when loaded
+        const video = document.getElementById('mp4-video');
+        video.addEventListener('loadedmetadata', function () {
+          updateMediaInfo(
+            'mp4-dimensions',
+            `${video.videoWidth} × ${video.videoHeight}px`,
+          );
+          updateMediaInfo('mp4-duration', `${video.duration.toFixed(2)}s`);
+        });
+      }
+
+      function updateMediaInfo(id, value) {
+        const element = document.getElementById(id);
+        if (element) {
+          element.textContent = value;
         }
+      }
     </script>
-</body>
+  </body>
 </html>

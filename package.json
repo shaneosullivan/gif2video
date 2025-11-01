@@ -14,6 +14,7 @@
   },
   "type": "module",
   "main": "./lib/index.js",
+  "browser": "./lib/browser/index.js",
   "types": "./lib/index.d.ts",
   "bin": {
     "gif2video": "./lib/cli.js"
@@ -23,7 +24,10 @@
     "converter/wasm"
   ],
   "scripts": {
-    "build": "tsdown src/index.ts src/cli.ts -d lib --target=node24",
+    "build": "npm run build:wasm && tsdown src/index.ts src/cli.ts -d lib --target=node24 && npm run build:browser",
+    "build:node": "tsdown src/index.ts src/cli.ts -d lib --target=node24",
+    "build:browser": "node esbuild.browser.mjs && tsc src/index.ts --declaration --emitDeclarationOnly --outDir lib/browser --module esnext --moduleResolution bundler",
+    "build:wasm": "./scripts/buildConverter.sh",
     "format": "prettier --experimental-cli --write .",
     "format:wasm": "prettier --experimental-cli --write 'converter/wasm/**/*.js'",
     "lint": "eslint --cache .",
@@ -33,16 +37,18 @@
     "vitest:run": "vitest run"
   },
   "dependencies": {
-    "gifwrap": "^0.10.1",
-    "jimp": "^1.6.0"
+    "h264-mp4-encoder": "^1.0.12",
+    "omggif": "^1.0.10"
   },
   "devDependencies": {
     "@ianvs/prettier-plugin-sort-imports": "^4.7.0",
     "@nkzw/eslint-config": "^3.2.0",
     "@prettier/plugin-oxc": "^0.0.4",
     "@types/node": "^24.7.2",
+    "@types/omggif": "^1.0.5",
     "@typescript-eslint/eslint-plugin": "^8.46.1",
     "@typescript-eslint/parser": "^8.46.1",
+    "esbuild": "^0.25.11",
     "eslint": "^9.37.0",
     "file-type": "^21.0.0",
     "npm-run-all2": "^8.0.4",

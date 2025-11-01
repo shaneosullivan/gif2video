@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Build script for converting C code to WASM using Emscripten
+# Builds separate WASM modules for browser and Node.js environments
 
 set -e
 
@@ -9,7 +10,7 @@ PROJECT_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"
 CONVERTER_DIR="$PROJECT_ROOT/converter"
 OUTPUT_DIR="$CONVERTER_DIR/wasm"
 
-echo "Building GIF to Video converter WASM module..."
+echo "Building GIF to Video converter WASM modules..."
 echo "Project root: $PROJECT_ROOT"
 echo "Converter source: $CONVERTER_DIR"
 echo "Output directory: $OUTPUT_DIR"
@@ -25,10 +26,28 @@ fi
 # Create output directory if it doesn't exist
 mkdir -p "$OUTPUT_DIR"
 
-# Compile C to WASM
-echo "Compiling C to WASM..."
+# Build for web (browser)
+echo ""
+echo "Building web version (browser-only)..."
+emcc "$CONVERTER_DIR/gif2video.c" "$CONVERTER_DIR/webcodecs_muxer.c" \
+    -o "$OUTPUT_DIR/gif2video-web.js" \
+    -s WASM=1 \
+    -s EXPORTED_RUNTIME_METHODS='["cwrap","ccall","getValue","setValue","UTF8ToString","HEAPU8"]' \
+    -s EXPORTED_FUNCTIONS='["_malloc","_free","_init_encoder","_add_frame","_finalize_video","_get_video_buffer","_get_video_size","_cleanup","_allocate_buffer","_free_buffer","_init_webcodecs_muxer","_set_decoder_config","_add_h264_frame","_finalize_webcodecs_mp4","_cleanup_webcodecs_muxer"]' \
+    -s ALLOW_MEMORY_GROWTH=1 \
+    -s MODULARIZE=1 \
+    -s EXPORT_ES6=1 \
+    -s EXPORT_NAME="createGif2VideoModule" \
+    -s ENVIRONMENT='web' \
+    -O3
+
+echo "✓ Web version built: $OUTPUT_DIR/gif2video-web.js"
+
+# Build for Node.js
+echo ""
+echo "Building Node.js version..."
 emcc "$CONVERTER_DIR/gif2video.c" \
-    -o "$OUTPUT_DIR/gif2video.js" \
+    -o "$OUTPUT_DIR/gif2video-node.js" \
     -s WASM=1 \
     -s EXPORTED_RUNTIME_METHODS='["cwrap","ccall","getValue","setValue","UTF8ToString","HEAPU8"]' \
     -s EXPORTED_FUNCTIONS='["_malloc","_free","_init_encoder","_add_frame","_finalize_video","_get_video_buffer","_get_video_size","_cleanup","_allocate_buffer","_free_buffer"]' \
@@ -36,19 +55,22 @@ emcc "$CONVERTER_DIR/gif2video.c" \
     -s MODULARIZE=1 \
     -s EXPORT_ES6=1 \
     -s EXPORT_NAME="createGif2VideoModule" \
-    -s ENVIRONMENT=node \
+    -s ENVIRONMENT='node' \
     -O3
 
+echo "✓ Node.js version built: $OUTPUT_DIR/gif2video-node.js"
+
+echo ""
 echo "Build completed successfully!"
 echo "Output files:"
-echo "  - $OUTPUT_DIR/gif2video.js"
-echo "  - $OUTPUT_DIR/gif2video.wasm"
+echo "  Web:    $OUTPUT_DIR/gif2video-web.js + gif2video-web.wasm"
+echo "  Node.js: $OUTPUT_DIR/gif2video-node.js + gif2video-node.wasm"
 
-# Format generated JavaScript file with Prettier
+# Format generated JavaScript files with Prettier
 echo ""
 echo "Formatting generated files with Prettier..."
 cd "$PROJECT_ROOT"
 npm run format:wasm
 
 echo ""
-echo "Done! WASM module built and formatted."
+echo "Done! WASM modules built and formatted."

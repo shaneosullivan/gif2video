@@ -310,35 +310,54 @@ static void create_mp4(Mp4Buf* b, const uint8_t** frames, size_t* frame_sizes, u
         total_duration += frame_delays[i];
     }
 
-    uint32_t mdat_offset;
+    // Calculate mdat size first (header + all frame data)
+    size_t mdat_data_size = 0;
+    for (int i = 0; i < frame_count; i++) {
+        mdat_data_size += frame_sizes[i];
+    }
 
+    // Write ftyp first
     wr_ftyp(b);
-    mdat_offset = b->size + 8;
+
+    // Create a temporary buffer to write moov
+    Mp4Buf moov_buf;
+    buf_init(&moov_buf, 4096);
+
+    size_t moov_s = box_start(&moov_buf, "moov");
+    wr_mvhd(&moov_buf, timescale, total_duration);
+
+    size_t trak_s = box_start(&moov_buf, "trak");
+    wr_tkhd(&moov_buf, total_duration, w, h);
+
+    size_t mdia_s = box_start(&moov_buf, "mdia");
+    wr_mdhd(&moov_buf, timescale, total_duration);
+    wr_hdlr(&moov_buf);
+
+    size_t minf_s = box_start(&moov_buf, "minf");
+    wr_vmhd(&moov_buf);
+
+    size_t dinf_s = box_start(&moov_buf, "dinf");
+    wr_dref(&moov_buf);
+    box_end(&moov_buf, dinf_s);
+
+    // Calculate mdat offset: current buffer (ftyp) + moov size + 8 (mdat header)
+    uint32_t mdat_offset = b->size + moov_buf.size + 8;
+
+    wr_stbl(&moov_buf, w, h, frame_sizes, frame_delays, frame_count, mdat_offset);
+
+    box_end(&moov_buf, minf_s);
+    box_end(&moov_buf, mdia_s);
+    box_end(&moov_buf, trak_s);
+    box_end(&moov_buf, moov_s);
+
+    // Write moov to main buffer
+    buf_ensure(b, moov_buf.size);
+    memcpy(b->data + b->size, moov_buf.data, moov_buf.size);
+    b->size += moov_buf.size;
+    free(moov_buf.data);
+
+    // Now write mdat
     wr_mdat(b, frames, frame_sizes, frame_count);
-
-    size_t moov_s = box_start(b, "moov");
-    wr_mvhd(b, timescale, total_duration);
-
-    size_t trak_s = box_start(b, "trak");
-    wr_tkhd(b, total_duration, w, h);
-
-    size_t mdia_s = box_start(b, "mdia");
-    wr_mdhd(b, timescale, total_duration);
-    wr_hdlr(b);
-
-    size_t minf_s = box_start(b, "minf");
-    wr_vmhd(b);
-
-    size_t dinf_s = box_start(b, "dinf");
-    wr_dref(b);
-    box_end(b, dinf_s);
-
-    wr_stbl(b, w, h, frame_sizes, frame_delays, frame_count, mdat_offset);
-
-    box_end(b, minf_s);
-    box_end(b, mdia_s);
-    box_end(b, trak_s);
-    box_end(b, moov_s);
 }
 
 // Global state

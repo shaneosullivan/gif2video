@@ -1,13 +1,4 @@
-import { readFile, stat, writeFile } from 'node:fs/promises';
-import { basename, extname, join } from 'node:path';
-import { GifCodec } from 'gifwrap';
-import { Jimp } from 'jimp';
-
-// Import the WASM module
-const wasmModulePath = join(
-  import.meta.dirname,
-  '../converter/wasm/gif2video.js',
-);
+import { decodeGif } from './gif-decoder.js';
 
 interface WasmModule {
   _free: (ptr: number) => void;
@@ -27,17 +18,6 @@ export interface ConversionOptions {
   width?: number;
 }
 
-interface Frame {
-  delay: number;
-  image: {
-    bitmap: {
-      data: Buffer;
-      height: number;
-      width: number;
-    };
-  };
-}
-
 export interface FrameInput {
   data: ImageData;
   delayMs: number;
@@ -50,12 +30,31 @@ interface ImageData {
 }
 
 /**
+ * Get WASM module path for current environment
+ */
+async function getWasmModulePath(): Promise<string> {
+  if (typeof window === 'undefined') {
+    // Node.js environment - use node-specific build
+    const { join } = await import('node:path');
+    return join(import.meta.dirname, '../converter/wasm/gif2video-node.js');
+  } else {
+    // Browser environment - use web-specific build
+    const scriptUrl = new URL(import.meta.url);
+    return new URL('../../converter/wasm/gif2video-web.js', scriptUrl).href;
+  }
+}
+
+/**
  * Resolve the output path, handling both file and directory destinations
+ * Only available in Node.js
  */
 async function resolveOutputPath(
   inputPath: string,
   outputPath: string,
 ): Promise<string> {
+  const { stat } = await import('node:fs/promises');
+  const { basename, extname, join } = await import('node:path');
+
   try {
     const stats = await stat(outputPath);
     if (stats.isDirectory()) {
@@ -80,7 +79,7 @@ async function resolveOutputPath(
 }
 
 /**
- * Optimize MP4 buffer - uses ffmpeg in Node.js or WebCodecs in browser
+ * Optimize MP4 buffer - uses ffmpeg in Node.js or WASM H.264 encoder in browser
  */
 async function optimizeMP4Buffer(
   mp4Buffer: Buffer | Uint8Array,
@@ -89,17 +88,8 @@ async function optimizeMP4Buffer(
   const inBrowser = typeof window !== 'undefined';
 
   if (inBrowser) {
-    // Use WebCodecs in browser
-    const { checkWebCodecs, encodeFramesWithWebCodecs } = await import('./webcodecs.js');
-    const webCodecsInfo = checkWebCodecs();
-
-    if (!webCodecsInfo.available) {
-      throw new Error(
-        'Optimization is not available in this browser. ' +
-          'WebCodecs API requires Chrome 94+, Edge 94+, or Firefox 133+. ' +
-          'Alternatively, use Node.js with ffmpeg for optimization.',
-      );
-    }
+    // Use WASM H.264 encoder in browser (replaces buggy WebCodecs)
+    const { encodeFramesWithWasmEncoder } = await import('./webcodecs.js');
 
     if (!frames || frames.length === 0) {
       throw new Error(
@@ -108,45 +98,13 @@ async function optimizeMP4Buffer(
       );
     }
 
-    // Encode frames with WebCodecs
-    return encodeFramesWithWebCodecs(frames);
+    // Encode frames with WASM H.264 encoder
+    return encodeFramesWithWasmEncoder(frames);
   } else {
     // Use ffmpeg in Node.js
     const { optimizeMP4 } = await import('./ffmpeg.js');
     return optimizeMP4(mp4Buffer instanceof Uint8Array ? Buffer.from(mp4Buffer) : mp4Buffer);
   }
-}
-
-/**
- * Extract frames from a GIF file
- */
-async function extractGifFrames(
-  gifBuffer: Buffer,
-): Promise<{ frames: Frame[]; height: number; width: number }> {
-  const codec = new GifCodec();
-  const gif = await codec.decodeGif(gifBuffer);
-  const frames: Frame[] = [];
-
-  // Extract all frames from the GIF
-  for (const gifFrame of gif.frames) {
-    // Convert GifFrame to Jimp
-    const jimp = new Jimp({
-      data: Buffer.from(gifFrame.bitmap.data),
-      height: gifFrame.bitmap.height,
-      width: gifFrame.bitmap.width,
-    });
-
-    frames.push({
-      delay: gifFrame.delayCentisecs * 10, // Convert centiseconds to milliseconds
-      image: jimp,
-    });
-  }
-
-  return {
-    frames,
-    height: gif.height,
-    width: gif.width,
-  };
 }
 
 /**
@@ -157,9 +115,10 @@ async function encodeFramesToMp4(
   width: number,
   height: number,
   fps: number = 10,
-): Promise<Buffer> {
+): Promise<Buffer | Uint8Array> {
   // Load WASM module
-  const createModule = await import(wasmModulePath).then((m) => m.default);
+  const wasmPath = await getWasmModulePath();
+  const createModule = await import(wasmPath).then((m) => m.default);
   const Module = (await createModule()) as WasmModule;
 
   // Initialize encoder
@@ -222,7 +181,11 @@ async function encodeFramesToMp4(
       videoSize as number,
     );
 
-    return Buffer.from(videoData);
+    // Return Buffer in Node.js, Uint8Array in browser
+    if (typeof Buffer !== 'undefined' && typeof window === 'undefined') {
+      return Buffer.from(videoData);
+    }
+    return new Uint8Array(videoData);
   } finally {
     // Clean up
     cleanup();
@@ -235,7 +198,7 @@ async function encodeFramesToMp4(
 export async function convertFrames(
   frames: FrameInput[],
   options: ConversionOptions = {},
-): Promise<Buffer> {
+): Promise<Buffer | Uint8Array> {
   if (!frames || frames.length === 0) {
     throw new Error('No frames provided');
   }
@@ -246,47 +209,60 @@ export async function convertFrames(
   const height = options.height || firstFrame.data.height;
 
   // Convert FrameInput to internal frame format
-  const internalFrames = frames.map((frame) => ({
-    data: frame.data.data instanceof Buffer
-      ? new Uint8Array(frame.data.data)
-      : new Uint8Array(frame.data.data),
-    delay: frame.delayMs,
-    height: frame.data.height,
-    width: frame.data.width,
-  }));
+  const internalFrames = frames.map((frame) => {
+    let data: Uint8Array;
+    if (frame.data.data instanceof Uint8Array) {
+      data = frame.data.data;
+    } else if (typeof Buffer !== 'undefined' && frame.data.data instanceof Buffer) {
+      data = new Uint8Array(frame.data.data);
+    } else {
+      data = new Uint8Array(frame.data.data);
+    }
+
+    return {
+      data,
+      delay: frame.delayMs,
+      height: frame.data.height,
+      width: frame.data.width,
+    };
+  });
 
   let mp4Buffer = await encodeFramesToMp4(internalFrames, width, height, fps);
 
   // Always optimize with best available method
   try {
     const optimized = await optimizeMP4Buffer(mp4Buffer, internalFrames);
-    mp4Buffer = optimized instanceof Buffer ? optimized : Buffer.from(optimized);
+    mp4Buffer = optimized;
   } catch (error) {
     // If optimization fails, continue with unoptimized buffer
     console.warn('Optimization failed, using unoptimized output:', (error as Error).message);
   }
 
-  return mp4Buffer;
+  // Return appropriate type based on environment
+  if (typeof Buffer !== 'undefined' && typeof window === 'undefined') {
+    return mp4Buffer instanceof Buffer ? mp4Buffer : Buffer.from(mp4Buffer);
+  }
+  return mp4Buffer instanceof Uint8Array ? mp4Buffer : new Uint8Array(mp4Buffer);
 }
 
 /**
  * Convert a GIF buffer to MP4 buffer
  */
 export async function convertGifBuffer(
-  gifBuffer: Buffer,
+  gifBuffer: Buffer | Uint8Array,
   options: ConversionOptions = {},
-): Promise<Buffer> {
+): Promise<Buffer | Uint8Array> {
   const { fps = 10 } = options;
 
-  // Extract frames from GIF
-  const { frames, height, width } = await extractGifFrames(gifBuffer);
+  // Decode GIF using browser-compatible decoder
+  const { frames, height, width } = decodeGif(gifBuffer);
 
   // Convert to internal frame format
   const internalFrames = frames.map((frame) => ({
-    data: new Uint8Array(frame.image.bitmap.data),
+    data: frame.data,
     delay: frame.delay,
-    height: frame.image.bitmap.height,
-    width: frame.image.bitmap.width,
+    height: frame.height,
+    width: frame.width,
   }));
 
   let mp4Buffer = await encodeFramesToMp4(internalFrames, width, height, fps);
@@ -294,23 +270,34 @@ export async function convertGifBuffer(
   // Always optimize with best available method
   try {
     const optimized = await optimizeMP4Buffer(mp4Buffer, internalFrames);
-    mp4Buffer = optimized instanceof Buffer ? optimized : Buffer.from(optimized);
+    mp4Buffer = optimized;
   } catch (error) {
     // If optimization fails, continue with unoptimized buffer
     console.warn('Optimization failed, using unoptimized output:', (error as Error).message);
   }
 
-  return mp4Buffer;
+  // Return appropriate type based on environment
+  if (typeof Buffer !== 'undefined' && typeof window === 'undefined') {
+    return mp4Buffer instanceof Buffer ? mp4Buffer : Buffer.from(mp4Buffer);
+  }
+  return mp4Buffer instanceof Uint8Array ? mp4Buffer : new Uint8Array(mp4Buffer);
 }
 
 /**
  * Convert a GIF file to MP4 file
+ * Only available in Node.js
  */
 export async function convertFile(
   inputPath: string,
   outputPath: string,
   options: ConversionOptions = {},
 ): Promise<string> {
+  if (typeof window !== 'undefined') {
+    throw new Error('convertFile() is only available in Node.js. Use convertGifBuffer() in the browser.');
+  }
+
+  const { readFile, writeFile } = await import('node:fs/promises');
+
   // Resolve the output path (handle directories and missing extensions)
   const resolvedOutputPath = await resolveOutputPath(inputPath, outputPath);
 
