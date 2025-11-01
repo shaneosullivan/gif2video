@@ -36,11 +36,11 @@ async function getWasmModulePath(): Promise<string> {
   if (typeof window === 'undefined') {
     // Node.js environment - use node-specific build
     const { join } = await import('node:path');
-    return join(import.meta.dirname, '../converter/wasm/gif2video-node.js');
+    return join(import.meta.dirname, '../converter/wasm/gif2vid-node.js');
   } else {
     // Browser environment - use web-specific build
     const scriptUrl = new URL(import.meta.url);
-    return new URL('../../converter/wasm/gif2video-web.js', scriptUrl).href;
+    return new URL('../../converter/wasm/gif2vid-web.js', scriptUrl).href;
   }
 }
 
@@ -83,7 +83,12 @@ async function resolveOutputPath(
  */
 async function optimizeMP4Buffer(
   mp4Buffer: Buffer | Uint8Array,
-  frames?: Array<{ data: Uint8Array; delay: number; height: number; width: number }>,
+  frames?: Array<{
+    data: Uint8Array;
+    delay: number;
+    height: number;
+    width: number;
+  }>,
 ): Promise<Buffer | Uint8Array> {
   const inBrowser = typeof window !== 'undefined';
 
@@ -103,7 +108,9 @@ async function optimizeMP4Buffer(
   } else {
     // Use ffmpeg in Node.js
     const { optimizeMP4 } = await import('./ffmpeg.js');
-    return optimizeMP4(mp4Buffer instanceof Uint8Array ? Buffer.from(mp4Buffer) : mp4Buffer);
+    return optimizeMP4(
+      mp4Buffer instanceof Uint8Array ? Buffer.from(mp4Buffer) : mp4Buffer,
+    );
   }
 }
 
@@ -111,7 +118,12 @@ async function optimizeMP4Buffer(
  * Core function: Encode frames to MP4 buffer
  */
 async function encodeFramesToMp4(
-  frames: Array<{ data: Uint8Array; delay: number; height: number; width: number }>,
+  frames: Array<{
+    data: Uint8Array;
+    delay: number;
+    height: number;
+    width: number;
+  }>,
   width: number,
   height: number,
   fps: number = 10,
@@ -162,7 +174,12 @@ async function encodeFramesToMp4(
       Module.HEAPU8.set(frameData, dataPtr);
 
       // Add frame to encoder with its delay
-      const addResult = addFrame(dataPtr, frame.width, frame.height, frame.delay);
+      const addResult = addFrame(
+        dataPtr,
+        frame.width,
+        frame.height,
+        frame.delay,
+      );
       Module._free(dataPtr);
 
       if (!addResult) {
@@ -213,7 +230,10 @@ export async function convertFrames(
     let data: Uint8Array;
     if (frame.data.data instanceof Uint8Array) {
       data = frame.data.data;
-    } else if (typeof Buffer !== 'undefined' && frame.data.data instanceof Buffer) {
+    } else if (
+      typeof Buffer !== 'undefined' &&
+      frame.data.data instanceof Buffer
+    ) {
       data = new Uint8Array(frame.data.data);
     } else {
       data = new Uint8Array(frame.data.data);
@@ -235,14 +255,19 @@ export async function convertFrames(
     mp4Buffer = optimized;
   } catch (error) {
     // If optimization fails, continue with unoptimized buffer
-    console.warn('Optimization failed, using unoptimized output:', (error as Error).message);
+    console.warn(
+      'Optimization failed, using unoptimized output:',
+      (error as Error).message,
+    );
   }
 
   // Return appropriate type based on environment
   if (typeof Buffer !== 'undefined' && typeof window === 'undefined') {
     return mp4Buffer instanceof Buffer ? mp4Buffer : Buffer.from(mp4Buffer);
   }
-  return mp4Buffer instanceof Uint8Array ? mp4Buffer : new Uint8Array(mp4Buffer);
+  return mp4Buffer instanceof Uint8Array
+    ? mp4Buffer
+    : new Uint8Array(mp4Buffer);
 }
 
 /**
@@ -273,14 +298,19 @@ export async function convertGifBuffer(
     mp4Buffer = optimized;
   } catch (error) {
     // If optimization fails, continue with unoptimized buffer
-    console.warn('Optimization failed, using unoptimized output:', (error as Error).message);
+    console.warn(
+      'Optimization failed, using unoptimized output:',
+      (error as Error).message,
+    );
   }
 
   // Return appropriate type based on environment
   if (typeof Buffer !== 'undefined' && typeof window === 'undefined') {
     return mp4Buffer instanceof Buffer ? mp4Buffer : Buffer.from(mp4Buffer);
   }
-  return mp4Buffer instanceof Uint8Array ? mp4Buffer : new Uint8Array(mp4Buffer);
+  return mp4Buffer instanceof Uint8Array
+    ? mp4Buffer
+    : new Uint8Array(mp4Buffer);
 }
 
 /**
@@ -293,7 +323,9 @@ export async function convertFile(
   options: ConversionOptions = {},
 ): Promise<string> {
   if (typeof window !== 'undefined') {
-    throw new Error('convertFile() is only available in Node.js. Use convertGifBuffer() in the browser.');
+    throw new Error(
+      'convertFile() is only available in Node.js. Use convertGifBuffer() in the browser.',
+    );
   }
 
   const { readFile, writeFile } = await import('node:fs/promises');

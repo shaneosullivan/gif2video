@@ -24,8 +24,14 @@ export function checkWebCodecs(): WebCodecsInfo {
     return { available: false, error: 'Not in browser environment' };
   }
 
-  if (typeof VideoEncoder === 'undefined' || typeof VideoDecoder === 'undefined') {
-    return { available: false, error: 'WebCodecs API not supported in this browser' };
+  if (
+    typeof VideoEncoder === 'undefined' ||
+    typeof VideoDecoder === 'undefined'
+  ) {
+    return {
+      available: false,
+      error: 'WebCodecs API not supported in this browser',
+    };
   }
 
   return { available: true };
@@ -69,11 +75,14 @@ export async function encodeFramesWithWebCodecs(
 
   // Load WASM module for MP4 muxing
   const scriptUrl = new URL(import.meta.url);
-  const wasmUrl = new URL('../converter/wasm/gif2video-web.js', scriptUrl).href;
+  const wasmUrl = new URL('../converter/wasm/gif2vid-web.js', scriptUrl).href;
   const wasmModule = await (await import(wasmUrl).then((m) => m.default))();
 
   // Initialize muxer with even dimensions
-  const initMuxer = wasmModule.cwrap('init_webcodecs_muxer', 'number', ['number', 'number']);
+  const initMuxer = wasmModule.cwrap('init_webcodecs_muxer', 'number', [
+    'number',
+    'number',
+  ]);
   const setDecoderConfig = wasmModule.cwrap('set_decoder_config', 'number', [
     'number',
     'number',
@@ -84,7 +93,9 @@ export async function encodeFramesWithWebCodecs(
     'number',
     'number',
   ]);
-  const finalizeMp4 = wasmModule.cwrap('finalize_webcodecs_mp4', 'number', ['number']);
+  const finalizeMp4 = wasmModule.cwrap('finalize_webcodecs_mp4', 'number', [
+    'number',
+  ]);
   const cleanupMuxer = wasmModule.cwrap('cleanup_webcodecs_muxer', null, []);
 
   if (!initMuxer(evenWidth, evenHeight)) {
@@ -98,7 +109,10 @@ export async function encodeFramesWithWebCodecs(
 
       // Initialize VideoEncoder with H.264 compression settings
       const encoder = new VideoEncoder({
-        output: (chunk: EncodedVideoChunk, metadata?: EncodedVideoChunkMetadata) => {
+        output: (
+          chunk: EncodedVideoChunk,
+          metadata?: EncodedVideoChunkMetadata,
+        ) => {
           // SKIP decoder config - let the muxer build its own
           // The decoder config from VideoEncoder has incorrect SPS width information
           if (metadata?.decoderConfig?.description) {
@@ -114,7 +128,12 @@ export async function encodeFramesWithWebCodecs(
 
           // Add frame to muxer
           const isKeyframe = chunk.type === 'key' ? 1 : 0;
-          const success = addH264Frame(dataPtr, data.length, chunk.timestamp, isKeyframe);
+          const success = addH264Frame(
+            dataPtr,
+            data.length,
+            chunk.timestamp,
+            isKeyframe,
+          );
           wasmModule._free(dataPtr);
 
           if (!success) {
@@ -200,7 +219,7 @@ export async function encodeFramesWithWebCodecs(
             const imageData = new ImageData(
               new Uint8ClampedArray(frameData),
               evenWidth,
-              evenHeight
+              evenHeight,
             );
 
             // Create ImageBitmap from ImageData

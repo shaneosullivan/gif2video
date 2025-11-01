@@ -1,18 +1,18 @@
 #!/usr/bin/env node
 
 /**
- * CLI for gif2video
+ * CLI for gif2vid
  *
  * Usage:
- *   gif2video input.gif output.mp4
- *   gif2video input.gif ./output-folder/
- *   gif2video input.gif output  # Will create output.mp4
- *   npx gif2video input.gif output.mp4
+ *   gif2vid input.gif output.mp4
+ *   gif2vid input.gif ./output-folder/
+ *   gif2vid input.gif output  # Will create output.mp4
+ *   npx gif2vid input.gif output.mp4
  */
-import { resolve } from 'node:path';
 import { stat } from 'node:fs/promises';
-import { convertFile } from './index.js';
+import { resolve } from 'node:path';
 import { printCompatInfo } from './ffmpeg.js';
+import { convertFile } from './index.js';
 
 const args = process.argv.slice(2);
 
@@ -24,29 +24,35 @@ if (args.includes('--compat')) {
 
 // Handle --help flag
 if (args.length < 2 || args.includes('--help') || args.includes('-h')) {
-  console.log('gif2video - Convert GIF animations to MP4 videos');
+  console.log('gif2vid - Convert GIF animations to MP4 videos');
   console.log('');
   console.log('Usage:');
-  console.log('  gif2video <input.gif> <output> [options]');
-  console.log('  npx gif2video <input.gif> <output> [options]');
+  console.log('  gif2vid <input.gif> <output> [options]');
+  console.log('  npx gif2vid <input.gif> <output> [options]');
   console.log('');
   console.log('Examples:');
-  console.log('  gif2video input.gif output.mp4');
-  console.log('  gif2video input.gif ./output-folder/');
-  console.log('  gif2video input.gif output  # Creates output.mp4');
-  console.log('  gif2video input.gif output.mp4 --fps 30  # Custom FPS');
+  console.log('  gif2vid input.gif output.mp4');
+  console.log('  gif2vid input.gif ./output-folder/');
+  console.log('  gif2vid input.gif output  # Creates output.mp4');
+  console.log('  gif2vid input.gif output.mp4 --fps 30  # Custom FPS');
   console.log('');
   console.log('Options:');
   console.log('  --fps <number>     Frames per second (default: 10)');
-  console.log('  --compat           Check compatibility and available features');
+  console.log(
+    '  --compat           Check compatibility and available features',
+  );
   console.log('  --help, -h         Show this help message');
   console.log('');
   console.log('Note:');
-  console.log('  Output is automatically optimized with the best available method:');
+  console.log(
+    '  Output is automatically optimized with the best available method:',
+  );
   console.log('  - Node.js: Uses ffmpeg (if installed)');
   console.log('  - Browser: Uses WebCodecs API (if supported)');
   console.log('  - Fallback: WASM-based encoding (always works)');
-  console.log('  Use --compat to check which optimization methods are available.');
+  console.log(
+    '  Use --compat to check which optimization methods are available.',
+  );
   process.exit(args.includes('--help') || args.includes('-h') ? 0 : 1);
 }
 

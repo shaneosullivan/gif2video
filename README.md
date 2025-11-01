@@ -8,49 +8,49 @@ The supported output formats are:
 ## Installation
 
 ```bash
-npm install gif2video
+npm install gif2vid
 ```
 
 Or use directly with npx (no installation required):
 
 ```bash
-npx gif2video input.gif output.mp4
+npx gif2vid input.gif output.mp4
 ```
 
 ## Usage
 
 ### Command Line Interface
 
-You can use gif2video directly from the command line:
+You can use gif2vid directly from the command line:
 
 ```bash
 # Using npx (no installation required)
-npx gif2video input.gif output.mp4
+npx gif2vid input.gif output.mp4
 
 # Or install globally
-npm install -g gif2video
-gif2video input.gif output.mp4
+npm install -g gif2vid
+gif2vid input.gif output.mp4
 
 # Convert to directory (auto-generates filename)
-gif2video input.gif ./videos/
+gif2vid input.gif ./videos/
 
 # Custom FPS
-gif2video input.gif output.mp4 --fps 30
+gif2vid input.gif output.mp4 --fps 30
 
 # Check compatibility and available features
-gif2video --compat
+gif2vid --compat
 
 # Show help
-gif2video --help
+gif2vid --help
 ```
 
 #### Automatic Optimization
 
-gif2video **automatically optimizes** output files using the best available method in your environment. This typically reduces file size by **70-99%** while maintaining visual quality.
+gif2vid **automatically optimizes** output files using the best available method in your environment. This typically reduces file size by **70-99%** while maintaining visual quality.
 
 **Optimization Methods:**
 
-gif2video automatically selects the best optimization method based on your environment:
+gif2vid automatically selects the best optimization method based on your environment:
 
 | Environment                       | Method        | Requirements                       | Compression      | Quality                      |
 | --------------------------------- | ------------- | ---------------------------------- | ---------------- | ---------------------------- |
@@ -72,7 +72,7 @@ sudo apt-get install ffmpeg
 choco install ffmpeg
 
 # Check compatibility
-gif2video --compat
+gif2vid --compat
 ```
 
 **Browser - WebCodecs Support:**
@@ -84,7 +84,7 @@ gif2video --compat
   - ✅ VideoEncoder/VideoDecoder available
   - ⚠️ Audio encoding only in Safari 26+ (not needed for GIF conversion)
   - ⚠️ May have platform-specific issues on older iOS versions
-  - **Recommendation**: Works for gif2video, but ffmpeg (Node.js) is more reliable
+  - **Recommendation**: Works for gif2vid, but ffmpeg (Node.js) is more reliable
 - ❌ **Firefox Mobile** - Not yet supported
 
 **Size comparison example:**
@@ -117,7 +117,7 @@ The library exports three functions for different use cases:
 Convert a GIF file directly to an MP4 file:
 
 ```typescript
-import { convertFile } from 'gif2video';
+import { convertFile } from 'gif2vid';
 
 // Convert a GIF to MP4 (returns the output file path)
 const outputPath = await convertFile('./input.gif', './output.mp4');
@@ -148,7 +148,7 @@ Work with GIF data in memory and get MP4 data back:
 
 ```typescript
 import { readFile, writeFile } from 'fs/promises';
-import { convertGifBuffer } from 'gif2video';
+import { convertGifBuffer } from 'gif2vid';
 
 // Read GIF from anywhere (file, network, database, etc.)
 const gifBuffer = await readFile('./animation.gif');
@@ -169,7 +169,7 @@ response.send(mp4Buffer);
 Create MP4 videos from any image data source:
 
 ```typescript
-import { convertFrames, type FrameInput } from 'gif2video';
+import { convertFrames, type FrameInput } from 'gif2vid';
 
 // Create frames from any source (canvas, image processing, generated graphics, etc.)
 const frames: FrameInput[] = [
@@ -241,7 +241,7 @@ node examples/convert.js input.gif output.mp4 --fps 30
 
 #### Example 1: Browser - Simple HTML Page (No Build Step)
 
-The easiest way to use gif2video in a browser is with the standalone script - just one `<script>` tag, no build tools required:
+The easiest way to use gif2vid in a browser is with the standalone script - just one `<script>` tag, no build tools required:
 
 ```html
 <!DOCTYPE html>
@@ -261,11 +261,11 @@ The easiest way to use gif2video in a browser is with the standalone script - ju
     <div id="status"></div>
 
     <!-- Load the standalone bundle - includes everything you need! -->
-    <script src="https://unpkg.com/gif2video/lib/browser/gif2video.standalone.js"></script>
+    <script src="https://unpkg.com/gif2vid/lib/browser/gif2vid.standalone.js"></script>
 
     <script>
-      // Access gif2video from the global window object
-      const { convertGifBuffer } = window.gif2video;
+      // Access gif2vid from the global window object
+      const { convertGifBuffer } = window.gif2vid;
 
       async function convert() {
         const file = document.getElementById('gifInput').files[0];
@@ -306,11 +306,11 @@ The easiest way to use gif2video in a browser is with the standalone script - ju
 
 **Features:**
 
-- ✅ **Single file deployment** - Just `gif2video.standalone.js` (~1.7 MB with embedded WASM)
+- ✅ **Single file deployment** - Just `gif2vid.standalone.js` (~1.7 MB with embedded WASM)
 - ✅ **Zero dependencies** - Includes everything (h264-mp4-encoder, WASM binary, etc.)
 - ✅ **No build step** - Works directly in any browser
 - ✅ **Automatic optimization** - Uses WebCodecs API when available
-- ✅ **Simple API** - Just `window.gif2video.convertGifBuffer()`
+- ✅ **Simple API** - Just `window.gif2vid.convertGifBuffer()`
 
 #### Example 2: Browser - Using ES Modules (With Build Tools)
 
@@ -332,7 +332,7 @@ If you're using a modern build tool (webpack, vite, rollup, etc.), you can impor
 
     <script type="module">
       // Import from the ES module build
-      import { convertGifBuffer } from 'https://unpkg.com/gif2video/lib/browser/index.js';
+      import { convertGifBuffer } from 'https://unpkg.com/gif2vid/lib/browser/index.js';
 
       window.convert = async function () {
         const file = document.getElementById('gifInput').files[0];
@@ -371,7 +371,7 @@ If you're using a modern build tool (webpack, vite, rollup, etc.), you can impor
 
 ```typescript
 import { readdir } from 'fs/promises';
-import { convertFile } from 'gif2video';
+import { convertFile } from 'gif2vid';
 
 // Convert all GIFs in a directory
 const gifFiles = await readdir('./gifs');
@@ -388,7 +388,7 @@ for (const file of gifFiles) {
 
 ```typescript
 import express from 'express';
-import { convertGifBuffer } from 'gif2video';
+import { convertGifBuffer } from 'gif2vid';
 
 const app = express();
 
@@ -415,7 +415,7 @@ app.post(
 
 ```typescript
 import { createCanvas } from 'canvas';
-import { convertFrames, type FrameInput } from 'gif2video';
+import { convertFrames, type FrameInput } from 'gif2vid';
 
 const width = 400;
 const height = 300;
@@ -454,7 +454,7 @@ await writeFile('./generated.mp4', mp4Buffer);
 
 ```typescript
 import { writeFile } from 'fs/promises';
-import { convertGifBuffer } from 'gif2video';
+import { convertGifBuffer } from 'gif2vid';
 
 // Fetch GIF from URL
 const response = await fetch('https://example.com/animation.gif');
@@ -473,7 +473,7 @@ await writeFile('./downloaded.mp4', mp4Buffer);
 ```typescript
 import { readdir } from 'fs/promises';
 import path from 'path';
-import { convertFile } from 'gif2video';
+import { convertFile } from 'gif2vid';
 
 async function convertWithProgress(inputDir: string, outputDir: string) {
   const files = await readdir(inputDir);
@@ -500,18 +500,18 @@ await convertWithProgress('./input-gifs', './output-videos');
 
 ### Browser Builds
 
-gif2video provides two browser builds to suit different use cases:
+gif2vid provides two browser builds to suit different use cases:
 
 #### Standalone Build (Recommended for Simple HTML Pages)
 
-**File:** `lib/browser/gif2video.standalone.js`
+**File:** `lib/browser/gif2vid.standalone.js`
 
 **Usage:**
 
 ```html
-<script src="https://unpkg.com/gif2video/lib/browser/gif2video.standalone.js"></script>
+<script src="https://unpkg.com/gif2vid/lib/browser/gif2vid.standalone.js"></script>
 <script>
-  const { convertGifBuffer } = window.gif2video;
+  const { convertGifBuffer } = window.gif2vid;
   // Use convertGifBuffer, convertFile, or convertFrames
 </script>
 ```
@@ -528,15 +528,16 @@ gif2video provides two browser builds to suit different use cases:
 
 **Deployment:**
 
-The standalone bundle is a **single file** (~1.7 MB) with the WASM binary embedded as base64. Just copy `gif2video.standalone.js` to your server - no other files needed!
+The standalone bundle is a **single file** (~1.7 MB) with the WASM binary embedded as base64. Just copy `gif2vid.standalone.js` to your server - no other files needed!
 
 ```
 your-website/
 └── js/
-    └── gif2video.standalone.js  ← Single file - that's it!
+    └── gif2vid.standalone.js  ← Single file - that's it!
 ```
 
 **Why single file?**
+
 - **Zero configuration** - Just drop it in and it works
 - **No CORS issues** - No external file loading
 - **Reliable** - Can't have missing WASM files
@@ -549,7 +550,7 @@ your-website/
 **Usage:**
 
 ```javascript
-import { convertGifBuffer } from 'gif2video';
+import { convertGifBuffer } from 'gif2vid';
 ```
 
 **Features:**
@@ -644,7 +645,7 @@ import { convertGifBuffer } from 'gif2video';
 ### Project Structure
 
 - `/converter` - C source code for video encoding
-  - `gif2video.c` - Main C implementation
+  - `gif2vid.c` - Main C implementation
   - `/wasm` - Compiled WASM output
 - `/scripts` - Build scripts
   - `buildConverter.sh` - Compiles C to WASM using Emscripten

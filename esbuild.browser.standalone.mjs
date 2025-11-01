@@ -1,5 +1,5 @@
 /**
- * Standalone Browser Bundle Builder for gif2video
+ * Standalone Browser Bundle Builder for gif2vid
  *
  * This script creates a self-contained, non-module browser bundle that can be
  * loaded with a simple <script> tag. This is different from the ES module build
@@ -11,18 +11,18 @@
  *    - For developers using modern build tools (webpack, vite, rollup, etc.)
  *    - Requires separate loading of h264-mp4-encoder
  *    - Smaller file size, tree-shakeable
- *    - Usage: import { convertGifBuffer } from 'gif2video'
+ *    - Usage: import { convertGifBuffer } from 'gif2vid'
  *
- * 2. **Standalone Build** (lib/browser/gif2video.standalone.js) - THIS FILE
+ * 2. **Standalone Build** (lib/browser/gif2vid.standalone.js) - THIS FILE
  *    - For simple HTML pages with no build step
  *    - Single file with ALL dependencies bundled (including h264-mp4-encoder)
  *    - Larger file size, but zero external dependencies
- *    - Usage: <script src="..."></script> then window.gif2video.convertGifBuffer()
+ *    - Usage: <script src="..."></script> then window.gif2vid.convertGifBuffer()
  *
  * ## How This Build Works
  *
  * 1. **Bundle with IIFE format**: Creates a self-executing function that doesn't
- *    require ES module support. Sets globalName to 'gif2videoModule'.
+ *    require ES module support. Sets globalName to 'gif2vidModule'.
  *
  * 2. **Stub Node.js imports**: Replaces node:path, node:fs, etc. with empty stubs
  *    since browser code doesn't need them.
@@ -37,7 +37,7 @@
  *    - Replace all import.meta.url references with our captured URL
  *    - This allows the WASM loader to calculate the correct relative path
  *
- * 5. **Expose on window**: Makes the module globally accessible as window.gif2video
+ * 5. **Expose on window**: Makes the module globally accessible as window.gif2vid
  *
  * ## Technical Challenges Solved
  *
@@ -54,9 +54,9 @@
  *
  * The final standalone bundle has this order:
  * 1. h264-mp4-encoder library code (sets window.HME)
- * 2. Script URL capture (var __gif2videoScriptUrl = ...)
- * 3. gif2video IIFE bundle (uses __gif2videoScriptUrl for WASM paths)
- * 4. Window exposure (window.gif2video = gif2videoModule)
+ * 2. Script URL capture (var __gif2vidScriptUrl = ...)
+ * 3. gif2vid IIFE bundle (uses __gif2vidScriptUrl for WASM paths)
+ * 4. Window exposure (window.gif2vid = gif2vidModule)
  */
 
 import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
@@ -68,7 +68,7 @@ try {
 } catch {}
 
 // ============================================================================
-// STEP 1: Bundle the gif2video code with IIFE format
+// STEP 1: Bundle the gif2vid code with IIFE format
 // ============================================================================
 // IIFE (Immediately Invoked Function Expression) creates a self-contained
 // bundle that doesn't pollute the global scope and doesn't require ES modules.
@@ -78,8 +78,8 @@ await esbuild.build({
   format: 'iife',
   target: 'es2020',
   platform: 'browser',
-  globalName: 'gif2videoModule',
-  outfile: 'lib/browser/gif2video.temp.js',
+  globalName: 'gif2vidModule',
+  outfile: 'lib/browser/gif2vid.temp.js',
   plugins: [
     {
       name: 'ignore-node-modules',
@@ -109,21 +109,21 @@ await esbuild.build({
     {
       name: 'replace-wasm-loader-import',
       setup(build) {
-        // Intercept imports of gif2video-web.js and replace with stub
-        // that returns the globally available createGif2VideoModule
-        build.onResolve({ filter: /gif2video-web\.js$/ }, (args) => {
+        // Intercept imports of gif2vid-web.js and replace with stub
+        // that returns the globally available createGif2VidModule
+        build.onResolve({ filter: /gif2vid-web\.js$/ }, (args) => {
           return { path: args.path, namespace: 'wasm-loader-stub' };
         });
         build.onLoad({ filter: /.*/, namespace: 'wasm-loader-stub' }, () => {
           return {
             contents: `
-            // This stub replaces the dynamic import of gif2video-web.js
+            // This stub replaces the dynamic import of gif2vid-web.js
             // The actual WASM loader will be embedded globally in the final bundle
             export default function() {
-              if (typeof window !== 'undefined' && window.createGif2VideoModule) {
-                return window.createGif2VideoModule;
+              if (typeof window !== 'undefined' && window.createGif2VidModule) {
+                return window.createGif2VidModule;
               }
-              throw new Error('createGif2VideoModule not found - this should not happen in standalone build');
+              throw new Error('createGif2VidModule not found - this should not happen in standalone build');
             }
           `,
             loader: 'js',
@@ -148,40 +148,34 @@ const h264Encoder = readFileSync(
 // STEP 2.5: Read and embed the WASM binary as base64
 // ============================================================================
 // By embedding the WASM binary directly, users only need a SINGLE file!
-const wasmBinary = readFileSync('converter/wasm/gif2video-web.wasm');
+const wasmBinary = readFileSync('converter/wasm/gif2vid-web.wasm');
 const wasmBase64 = wasmBinary.toString('base64');
 
 console.log(`  WASM binary size: ${(wasmBinary.length / 1024).toFixed(2)} KB`);
 console.log(`  Base64 encoded: ${(wasmBase64.length / 1024).toFixed(2)} KB`);
 
 // ============================================================================
-// STEP 2.6: Read and modify the WASM loader (gif2video-web.js)
+// STEP 2.6: Read and modify the WASM loader (gif2vid-web.js)
 // ============================================================================
 // The WASM loader normally fetches the .wasm file from a URL.
 // We'll modify it to use our embedded binary data directly to avoid any fetch calls.
-let wasmLoader = readFileSync(
-  'converter/wasm/gif2video-web.js',
-  'utf-8',
-);
+let wasmLoader = readFileSync('converter/wasm/gif2vid-web.js', 'utf-8');
 
-// The WASM loader has code like: return new URL("gif2video-web.wasm", import.meta.url).href
+// The WASM loader has code like: return new URL("gif2vid-web.wasm", import.meta.url).href
 // We'll replace this to return a dummy URL since we'll provide wasmBinary directly
 wasmLoader = wasmLoader.replace(
-  /return new URL\("gif2video-web\.wasm",import\.meta\.url\)\.href/g,
-  'return "embedded.wasm"'
+  /return new URL\("gif2vid-web\.wasm",import\.meta\.url\)\.href/g,
+  'return "embedded.wasm"',
 );
 
 // Also handle any other references to import.meta.url
-wasmLoader = wasmLoader.replace(
-  /import\.meta\.url/g,
-  'location.href'
-);
+wasmLoader = wasmLoader.replace(/import\.meta\.url/g, 'location.href');
 
 // Inject code to set wasmBinary directly from our embedded data
 // We replace the wasmBinary variable declaration to initialize it with our embedded binary
 wasmLoader = wasmLoader.replace(
   /var wasmBinary;/g,
-  'var wasmBinary=__gif2videoWasmBinary;'
+  'var wasmBinary=__gif2vidWasmBinary;',
 );
 
 // CRITICAL FIX: Make instantiateAsync use the binary parameter directly if provided
@@ -189,19 +183,19 @@ wasmLoader = wasmLoader.replace(
 // instead of calling instantiateArrayBuffer which tries to fetch
 wasmLoader = wasmLoader.replace(
   /async function instantiateAsync\(binary,binaryFile,imports\)\{/g,
-  'async function instantiateAsync(binary,binaryFile,imports){console.log("[gif2video] instantiateAsync: Using "+(binary?"EMBEDDED":"FETCHED")+" WASM");if(binary){try{var instance=await WebAssembly.instantiate(binary,imports);return instance}catch(reason){err(`failed to instantiate embedded wasm: ${reason}`);abort(reason)}}'
+  'async function instantiateAsync(binary,binaryFile,imports){console.log("[gif2vid] instantiateAsync: Using "+(binary?"EMBEDDED":"FETCHED")+" WASM");if(binary){try{var instance=await WebAssembly.instantiate(binary,imports);return instance}catch(reason){err(`failed to instantiate embedded wasm: ${reason}`);abort(reason)}}',
 );
 
 // Also disable the streaming path as backup
 wasmLoader = wasmLoader.replace(
   /if\(!binary\)\{try\{var response=fetch/g,
-  'if(false && !binary){try{var response=fetch'
+  'if(false && !binary){try{var response=fetch',
 );
 
 // Remove the export and make it a global function
 wasmLoader = wasmLoader.replace(
-  /export default createGif2VideoModule;/g,
-  'window.createGif2VideoModule = createGif2VideoModule;'
+  /export default createGif2VidModule;/g,
+  'window.createGif2VidModule = createGif2VidModule;',
 );
 
 // ============================================================================
@@ -210,28 +204,19 @@ wasmLoader = wasmLoader.replace(
 // Since IIFE format doesn't support import.meta, we need to replace these
 // references with runtime-captured values.
 
-let gif2videoBundle = readFileSync('lib/browser/gif2video.temp.js', 'utf-8');
+let gif2vidBundle = readFileSync('lib/browser/gif2vid.temp.js', 'utf-8');
 
 // Replace import.meta.dirname with empty string (not used in browser)
 // Note: esbuild transforms import.meta to import_meta, so we handle both patterns
-gif2videoBundle = gif2videoBundle.replace(/import\.meta\.dirname/g, '""');
-gif2videoBundle = gif2videoBundle.replace(/import_meta\.dirname/g, '""');
+gif2vidBundle = gif2vidBundle.replace(/import\.meta\.dirname/g, '""');
+gif2vidBundle = gif2vidBundle.replace(/import_meta\.dirname/g, '""');
 
 // Replace import.meta.url with location.href
 // In the browser, we use location.href as a fallback for module resolution
 // Note: esbuild may create import_meta, import_meta2, etc. for different scopes
-gif2videoBundle = gif2videoBundle.replace(
-  /import\.meta\.url/g,
-  'location.href',
-);
-gif2videoBundle = gif2videoBundle.replace(
-  /import_meta\.url/g,
-  'location.href',
-);
-gif2videoBundle = gif2videoBundle.replace(
-  /import_meta2\.url/g,
-  'location.href',
-);
+gif2vidBundle = gif2vidBundle.replace(/import\.meta\.url/g, 'location.href');
+gif2vidBundle = gif2vidBundle.replace(/import_meta\.url/g, 'location.href');
+gif2vidBundle = gif2vidBundle.replace(/import_meta2\.url/g, 'location.href');
 
 // CRITICAL FIX: Replace dynamic imports of WASM loader with global reference
 // The bundled code has patterns like:
@@ -241,16 +226,16 @@ gif2videoBundle = gif2videoBundle.replace(
 
 // Pattern 1: await (await import(wasmUrl).then((m) => m.default))()
 // This double-await pattern needs to be replaced entirely
-gif2videoBundle = gif2videoBundle.replace(
+gif2vidBundle = gif2vidBundle.replace(
   /await \(await import\(wasmUrl\)\.then\(\(m\) => m\.default\)\)\(\)/g,
-  'await window.createGif2VideoModule()',
+  'await window.createGif2VidModule()',
 );
 
 // Pattern 2: await import(wasmPath).then((m) => m.default)
 // Note: This is assigned to a variable, so it just needs the function reference
-gif2videoBundle = gif2videoBundle.replace(
+gif2vidBundle = gif2vidBundle.replace(
   /await import\(wasmPath\)\.then\(\(m\) => m\.default\)/g,
-  'window.createGif2VideoModule',
+  'window.createGif2VidModule',
 );
 
 // ============================================================================
@@ -261,7 +246,7 @@ gif2videoBundle = gif2videoBundle.replace(
 const scriptUrlCapture = `
 // The WASM binary is embedded directly in this file as base64 data
 // We decode it and provide it directly to avoid any fetch() calls
-var __gif2videoWasmBinary = (function() {
+var __gif2vidWasmBinary = (function() {
   // Use embedded WASM binary (base64 encoded)
   var wasmBase64 = '${wasmBase64}';
 
@@ -284,11 +269,11 @@ const wasmInjector = `
 `;
 
 // Wrapper #3: Expose the module to window
-// This comes AFTER the bundle because gif2videoModule is defined by the IIFE
+// This comes AFTER the bundle because gif2vidModule is defined by the IIFE
 const moduleExposer = `
 // Expose the IIFE module directly on window for global access
-// Developers can now use: window.gif2video.convertGifBuffer()
-window.gif2video = gif2videoModule;
+// Developers can now use: window.gif2vid.convertGifBuffer()
+window.gif2vid = gif2vidModule;
 `;
 
 // ============================================================================
@@ -296,11 +281,11 @@ window.gif2video = gif2videoModule;
 // ============================================================================
 // The order is critical:
 //   1. h264-encoder: Sets up window.HME for video encoding
-//   2. scriptUrlCapture: Defines __gif2videoWasmBinary variable
-//   3. wasmLoader: Embedded WASM loader (creates window.createGif2VideoModule)
-//   4. wasmInjector: Overrides createGif2VideoModule to inject binary
-//   5. gif2videoBundle: The IIFE that uses window.createGif2VideoModule
-//   6. moduleExposer: Exposes gif2videoModule as window.gif2video
+//   2. scriptUrlCapture: Defines __gif2vidWasmBinary variable
+//   3. wasmLoader: Embedded WASM loader (creates window.createGif2VidModule)
+//   4. wasmInjector: Overrides createGif2VidModule to inject binary
+//   5. gif2vidBundle: The IIFE that uses window.createGif2VidModule
+//   6. moduleExposer: Exposes gif2vidModule as window.gif2vid
 const standaloneBundle = `${h264Encoder}
 
 ${scriptUrlCapture}
@@ -309,7 +294,7 @@ ${wasmLoader}
 
 ${wasmInjector}
 
-${gif2videoBundle}
+${gif2vidBundle}
 
 ${moduleExposer}
 `;
@@ -317,27 +302,33 @@ ${moduleExposer}
 // ============================================================================
 // STEP 6: Write the final bundle and clean up
 // ============================================================================
-writeFileSync('lib/browser/gif2video.standalone.js', standaloneBundle);
+writeFileSync('lib/browser/gif2vid.standalone.js', standaloneBundle);
 
 // Clean up the temporary bundle file
 try {
-  unlinkSync('lib/browser/gif2video.temp.js');
+  unlinkSync('lib/browser/gif2vid.temp.js');
 } catch {}
 
 // Success! Print usage instructions
-const finalSize = (readFileSync('lib/browser/gif2video.standalone.js').length / 1024 / 1024).toFixed(2);
+const finalSize = (
+  readFileSync('lib/browser/gif2vid.standalone.js').length /
+  1024 /
+  1024
+).toFixed(2);
 
 console.log('✓ Standalone browser bundle created successfully');
-console.log('  Output: lib/browser/gif2video.standalone.js');
+console.log('  Output: lib/browser/gif2vid.standalone.js');
 console.log(`  Size: ${finalSize} MB`);
 console.log('');
 console.log('  🎉 SINGLE FILE DEPLOYMENT!');
-console.log('  The WASM binary is embedded as base64 - no external files needed!');
+console.log(
+  '  The WASM binary is embedded as base64 - no external files needed!',
+);
 console.log('');
 console.log('  Usage in HTML:');
-console.log('    <script src="lib/browser/gif2video.standalone.js"></script>');
+console.log('    <script src="lib/browser/gif2vid.standalone.js"></script>');
 console.log('    <script>');
-console.log('      const { convertGifBuffer } = window.gif2video;');
+console.log('      const { convertGifBuffer } = window.gif2vid;');
 console.log('      // Use convertGifBuffer, convertFile, or convertFrames');
 console.log('    </script>');
 console.log('');
@@ -345,5 +336,7 @@ console.log('  Features:');
 console.log('    • True single file deployment (WASM embedded as base64)');
 console.log('    • Zero configuration required');
 console.log('    • H.264 encoding: Includes h264-mp4-encoder for optimization');
-console.log('    • WebCodecs support: Automatically uses browser optimization when available');
+console.log(
+  '    • WebCodecs support: Automatically uses browser optimization when available',
+);
 console.log('    • WASM fallback: Works even without WebCodecs support');

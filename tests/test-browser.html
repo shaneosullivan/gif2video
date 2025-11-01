@@ -3,9 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>gif2video Browser Test</title>
-    <!-- Load the standalone bundle that includes h264-mp4-encoder and gif2video -->
-    <script src="../lib/browser/gif2video.standalone.js"></script>
+    <title>gif2vid Browser Test</title>
+    <!-- Load the standalone bundle that includes h264-mp4-encoder and gif2vid -->
+    <script src="../lib/browser/gif2vid.standalone.js"></script>
     <style>
       * {
         box-sizing: border-box;
@@ -283,7 +283,7 @@
   <body>
     <div class="container">
       <header>
-        <h1>🎬 gif2video</h1>
+        <h1>🎬 gif2vid</h1>
         <p class="subtitle">
           Convert GIF animations to optimized MP4 videos in your browser
         </p>
@@ -303,7 +303,7 @@
               <strong>Select a GIF file:</strong>
             </label>
             <input type="file" id="gif-input" accept="image/gif" />
-            <p><em>Converts GIF to MP4 using bundled gif2video library</em></p>
+            <p><em>Converts GIF to MP4 using bundled gif2vid library</em></p>
             <span
               id="processing-indicator"
               class="processing"
@@ -329,8 +329,8 @@
     </div>
 
     <script>
-      // Use the global gif2video object from the standalone bundle
-      const { convertGifBuffer } = window.gif2video;
+      // Use the global gif2vid object from the standalone bundle
+      const { convertGifBuffer } = window.gif2vid;
 
       // Check WebCodecs support
       const webCodecsSupported =

@@ -1,5 +1,5 @@
 /**
- * ES Module Browser Bundle Builder for gif2video
+ * ES Module Browser Bundle Builder for gif2vid
  *
  * This script creates an ES module browser bundle that can be imported by
  * modern build tools (webpack, vite, rollup, etc.) or used directly in browsers
@@ -11,13 +11,13 @@
  *    - For developers using modern build tools (webpack, vite, rollup, etc.)
  *    - Supports tree-shaking for smaller final bundles
  *    - Requires build step or native ES module support
- *    - Usage: import { convertGifBuffer } from 'gif2video'
+ *    - Usage: import { convertGifBuffer } from 'gif2vid'
  *    - Note: h264-mp4-encoder must be loaded separately
  *
- * 2. **Standalone Build** (lib/browser/gif2video.standalone.js)
+ * 2. **Standalone Build** (lib/browser/gif2vid.standalone.js)
  *    - For simple HTML pages with no build step
  *    - Single file with ALL dependencies bundled
- *    - Usage: <script> tag then window.gif2video.convertGifBuffer()
+ *    - Usage: <script> tag then window.gif2vid.convertGifBuffer()
  *    - See: esbuild.browser.standalone.mjs
  *
  * ## How This Build Works
@@ -40,7 +40,7 @@
  *
  * ### With a build tool (webpack, vite, etc.)
  * ```javascript
- * import { convertGifBuffer } from 'gif2video';
+ * import { convertGifBuffer } from 'gif2vid';
  *
  * // Note: You'll need to ensure h264-mp4-encoder is loaded
  * const mp4Buffer = await convertGifBuffer(gifBuffer);
@@ -63,7 +63,7 @@
  * | Feature                  | ES Module Build (this) | Standalone Build          |
  * |--------------------------|------------------------|---------------------------|
  * | Format                   | ESM                    | IIFE                      |
- * | Import style             | import/export          | window.gif2video          |
+ * | Import style             | import/export          | window.gif2vid            |
  * | Build tool required      | Recommended            | No                        |
  * | h264-mp4-encoder bundled | No (external)          | Yes (embedded)            |
  * | File size                | Smaller                | Larger                    |
@@ -71,8 +71,8 @@
  * | import.meta support      | Native                 | Polyfilled                |
  */
 
-import * as esbuild from 'esbuild';
 import { mkdirSync, rmSync } from 'node:fs';
+import * as esbuild from 'esbuild';
 
 // ============================================================================
 // STEP 1: Clean and recreate the browser output directory
@@ -129,7 +129,7 @@ console.log('✓ ES module browser bundle created successfully');
 console.log('  Output: lib/browser/index.js');
 console.log('');
 console.log('  Usage with build tools:');
-console.log('    import { convertGifBuffer } from "gif2video";');
+console.log('    import { convertGifBuffer } from "gif2vid";');
 console.log('');
 console.log('  Usage in browser (native ES modules):');
 console.log('    <script type="module">');
@@ -137,6 +137,10 @@ console.log('      import { convertGifBuffer } from "./lib/browser/index.js";');
 console.log('    </script>');
 console.log('');
 console.log('  ⚠️  Important: h264-mp4-encoder must be loaded separately');
-console.log('    <script src="node_modules/h264-mp4-encoder/embuild/dist/h264-mp4-encoder.web.js"></script>');
+console.log(
+  '    <script src="node_modules/h264-mp4-encoder/embuild/dist/h264-mp4-encoder.web.js"></script>',
+);
 console.log('');
-console.log('  💡 For a single-file solution, use: npm run build:browser:standalone');
+console.log(
+  '  💡 For a single-file solution, use: npm run build:browser:standalone',
+);

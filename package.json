@@ -1,11 +1,11 @@
 {
-  "name": "gif2video",
+  "name": "gif2vid",
   "version": "0.0.1",
-  "description": "Library.",
-  "homepage": "https://github.com/chofter/gif2video",
+  "description": "Convert GIF animations to optimized MP4 videos. Works in Node.js and browsers with WebCodecs support.",
+  "homepage": "https://github.com/shaneosullivan/gif2vid",
   "repository": {
     "type": "git",
-    "url": "https://github.com/chofter/gif2video"
+    "url": "https://github.com/shaneosullivan/gif2vid"
   },
   "license": "MIT",
   "author": {
@@ -17,7 +17,7 @@
   "browser": "./lib/browser/index.js",
   "types": "./lib/index.d.ts",
   "bin": {
-    "gif2video": "./lib/cli.js"
+    "gif2vid": "./lib/cli.js"
   },
   "files": [
     "lib",
@@ -25,9 +25,9 @@
   ],
   "scripts": {
     "build": "npm run build:wasm && tsdown src/index.ts src/cli.ts -d lib --target=node24 && npm run build:browser && npm run build:browser:standalone",
-    "build:node": "tsdown src/index.ts src/cli.ts -d lib --target=node24",
     "build:browser": "node esbuild.browser.mjs && tsc src/index.ts --declaration --emitDeclarationOnly --outDir lib/browser --module esnext --moduleResolution bundler",
     "build:browser:standalone": "node esbuild.browser.standalone.mjs",
+    "build:node": "tsdown src/index.ts src/cli.ts -d lib --target=node24",
     "build:wasm": "./scripts/buildConverter.sh",
     "format": "prettier --experimental-cli --write .",
     "format:wasm": "prettier --experimental-cli --write 'converter/wasm/**/*.js'",

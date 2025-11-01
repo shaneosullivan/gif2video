@@ -4,10 +4,10 @@
  */
 
 import { exec } from 'node:child_process';
-import { promisify } from 'node:util';
-import { writeFile, unlink } from 'node:fs/promises';
+import { unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { promisify } from 'node:util';
 
 const execAsync = promisify(exec);
 
@@ -40,7 +40,7 @@ export async function checkFFmpeg(): Promise<FFmpegInfo> {
  * Print compatibility information
  */
 export async function printCompatInfo(): Promise<void> {
-  console.log('gif2video - Compatibility Check\n');
+  console.log('gif2vid - Compatibility Check\n');
   console.log('Base Functionality:');
   console.log('  ✓ WASM-based MP4 encoding (no dependencies required)');
   console.log('  ✓ Works in Node.js and browsers');
@@ -64,7 +64,9 @@ export async function printCompatInfo(): Promise<void> {
 
   console.log('\nRecommendation:');
   if (ffmpegInfo.available) {
-    console.log('  All features are available! Automatic optimization enabled.');
+    console.log(
+      '  All features are available! Automatic optimization enabled.',
+    );
   } else {
     console.log('  Install ffmpeg to enable automatic optimization.');
     console.log('  Basic conversion still works without it (larger files).');
@@ -94,8 +96,8 @@ export async function optimizeMP4(
 
   // Create temporary files
   const tempDir = tmpdir();
-  const inputPath = join(tempDir, `gif2video-input-${Date.now()}.mp4`);
-  const outputPath = join(tempDir, `gif2video-output-${Date.now()}.mp4`);
+  const inputPath = join(tempDir, `gif2vid-input-${Date.now()}.mp4`);
+  const outputPath = join(tempDir, `gif2vid-output-${Date.now()}.mp4`);
 
   try {
     // Write input buffer to temp file
@@ -106,7 +108,8 @@ export async function optimizeMP4(
     // The scale filter ensures dimensions are divisible by 2 (required for H.264)
     const ffmpegCommand = [
       'ffmpeg',
-      '-i', inputPath,
+      '-i',
+      inputPath,
       '-vf "scale=trunc(iw/2)*2:trunc(ih/2)*2"', // Ensure even dimensions
       '-c:v libx264', // H.264 codec
       `-preset ${preset}`, // Encoding speed/compression tradeoff
@@ -142,7 +145,10 @@ export async function optimizeMP4(
 /**
  * Get file size reduction percentage
  */
-export function getSizeReduction(originalSize: number, optimizedSize: number): string {
+export function getSizeReduction(
+  originalSize: number,
+  optimizedSize: number,
+): string {
   const reduction = ((originalSize - optimizedSize) / originalSize) * 100;
   return reduction.toFixed(1);
 }

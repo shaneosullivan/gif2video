@@ -22,7 +22,9 @@ export interface DecodedGif {
 /**
  * Decode a GIF buffer into frames
  */
-export function decodeGif(gifBuffer: Uint8Array | ArrayBuffer | any): DecodedGif {
+export function decodeGif(
+  gifBuffer: Uint8Array | ArrayBuffer | any,
+): DecodedGif {
   // Convert to Uint8Array if needed
   let uint8Array: Uint8Array;
   if (gifBuffer instanceof Uint8Array) {
@@ -33,7 +35,11 @@ export function decodeGif(gifBuffer: Uint8Array | ArrayBuffer | any): DecodedGif
     uint8Array = new Uint8Array(gifBuffer);
   } else if (gifBuffer.buffer instanceof ArrayBuffer) {
     // Handle TypedArray views
-    uint8Array = new Uint8Array(gifBuffer.buffer, gifBuffer.byteOffset, gifBuffer.byteLength);
+    uint8Array = new Uint8Array(
+      gifBuffer.buffer,
+      gifBuffer.byteOffset,
+      gifBuffer.byteLength,
+    );
   } else {
     uint8Array = gifBuffer;
   }
